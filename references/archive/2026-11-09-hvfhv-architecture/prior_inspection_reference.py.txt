@@ -1,0 +1,57 @@
+"""One-off research: read public Parquet metadata and bounded samples, no pipeline."""
+import io, json, hashlib, urllib.request, datetime, concurrent.futures, ssl
+from pathlib import Path
+import pyarrow.parquet as pq
+urllib.request.install_opener(urllib.request.build_opener(urllib.request.HTTPSHandler(context=ssl.create_default_context(cafile='/etc/ssl/cert.pem'))))
+
+OUT=Path('<ORIGINAL_WORKSPACE>/private/runs/2026-11-08-tlc-feasibility')
+OUT.mkdir(parents=True,exist_ok=True,mode=0o700)
+
+class HTTPFile(io.RawIOBase):
+    def __init__(self,url):
+        self.url=url; self.pos=0; self.read_bytes=0; self.requests=0
+        with urllib.request.urlopen(urllib.request.Request(url,method='HEAD'),timeout=30) as r:
+            self.size=int(r.headers['Content-Length']); self.etag=r.headers.get('ETag'); self.modified=r.headers.get('Last-Modified')
+    def readable(self): return True
+    def seekable(self): return True
+    def tell(self): return self.pos
+    def seek(self,n,whence=0):
+        self.pos=n if whence==0 else self.pos+n if whence==1 else self.size+n
+        return self.pos
+    def read(self,n=-1):
+        n=min(self.size-self.pos,n if n>=0 else self.size)
+        if n<=0:return b''
+        start=self.pos; end=start+n-1
+        req=urllib.request.Request(self.url,headers={'Range':f'bytes={start}-{end}','If-Match':self.etag})
+        with urllib.request.urlopen(req,timeout=60) as r:
+            assert r.status==206,(self.url,r.status)
+            assert r.headers['Content-Range']==f'bytes {start}-{end}/{self.size}'
+            b=r.read(); assert len(b)==n
+        self.pos+=n;self.read_bytes+=n;self.requests+=1
+        return b
+
+def inspect(spec):
+    kind,month=spec;name=f'{kind}_tripdata_{month}.parquet'
+    url='https://d37ci6vzurychx.cloudfront.net/trip-data/'+name
+    result={'url':url,'period':month,'kind':kind,'captured_at':datetime.datetime.now(datetime.timezone.utc).isoformat()}
+    try:
+        f=HTTPFile(url); p=pq.ParquetFile(f)
+        result.update(bytes=f.size,etag=f.etag,last_modified=f.modified,rows=p.metadata.num_rows,row_groups=p.metadata.num_row_groups,schema={x.name:str(x.type) for x in p.schema_arrow})
+        result['row_group_sizes']=[p.metadata.row_group(i).num_rows for i in range(p.metadata.num_row_groups)]
+        cols=['tpep_pickup_datetime','tpep_dropoff_datetime','PULocationID','DOLocationID','trip_distance','fare_amount','total_amount','payment_type','passenger_count'] if kind=='yellow' else ['request_datetime','pickup_datetime','dropoff_datetime','PULocationID','DOLocationID','trip_miles','trip_time','base_passenger_fare','driver_pay']
+        if 'cbd_congestion_fee' in p.schema_arrow.names:cols+=['cbd_congestion_fee']
+        batch=next(p.iter_batches(batch_size=20000,row_groups=[0],columns=cols,use_threads=False))
+        rows=batch.to_pylist(); ts='tpep_pickup_datetime' if kind=='yellow' else 'pickup_datetime';te='tpep_dropoff_datetime' if kind=='yellow' else 'dropoff_datetime';dist='trip_distance' if kind=='yellow' else 'trip_miles';fare='fare_amount' if kind=='yellow' else 'base_passenger_fare'
+        counts={'dropoff_before_pickup':sum(r[te]<r[ts] for r in rows if r[te] is not None and r[ts] is not None),'pickup_outside_filename_month':sum(r[ts].strftime('%Y-%m')!=month for r in rows if r[ts] is not None),'zero_distance':sum(r[dist]==0 for r in rows),'negative_fare':sum(r[fare]<0 for r in rows if r[fare] is not None),'nulls':{c:sum(r[c] is None for r in rows) for c in cols},'pickup_min':str(min(r[ts] for r in rows if r[ts] is not None)),'pickup_max':str(max(r[ts] for r in rows if r[ts] is not None))}
+        if kind=='fhvhv':counts['request_after_pickup']=sum(r['request_datetime']>r[ts] for r in rows if r['request_datetime'] is not None and r[ts] is not None)
+        result['sample']={'method':'first 20,000 rows of row group 0; selected columns only; non-random, not population-representative','rows':len(rows),'columns':cols,'findings':counts}
+        # Hash the observed projected sample, not a claim of full-file hashing.
+        buf=io.BytesIO();pq.write_table(__import__('pyarrow').Table.from_batches([batch]),buf)
+        result['sample']['serialized_projection_sha256']=hashlib.sha256(buf.getvalue()).hexdigest()
+        result.update(bytes_fetched=f.read_bytes,range_requests=f.requests,complete_file_downloaded=False)
+    except Exception as e: result['error']=repr(e)
+    dest=OUT/(name+'.inspection.json');dest.write_text(json.dumps(result,indent=2));dest.chmod(0o600)
+    print(json.dumps(result),flush=True)
+
+with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+    list(pool.map(inspect,[(k,m) for k in ['yellow','fhvhv'] for m in ['2024-12','2025-01','2026-09']]))

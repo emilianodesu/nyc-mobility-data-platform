@@ -1,0 +1,26 @@
+{
+  "source": "https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv",
+  "rows": 265,
+  "unique_location_ids": 265,
+  "sha256": "1a99e105092230f8620f301edcca7f80d3080642ff404d28ed957d3fa222c8ed",
+  "special_rows": [
+    {
+      "LocationID": "1",
+      "Borough": "EWR",
+      "Zone": "Newark Airport",
+      "service_zone": "EWR"
+    },
+    {
+      "LocationID": "264",
+      "Borough": "Unknown",
+      "Zone": "N/A",
+      "service_zone": "N/A"
+    },
+    {
+      "LocationID": "265",
+      "Borough": "N/A",
+      "Zone": "Outside of NYC",
+      "service_zone": "N/A"
+    }
+  ]
+}

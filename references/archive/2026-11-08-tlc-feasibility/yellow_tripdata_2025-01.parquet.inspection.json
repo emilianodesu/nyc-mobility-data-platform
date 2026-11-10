@@ -1,0 +1,79 @@
+{
+  "url": "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2025-01.parquet",
+  "period": "2025-01",
+  "kind": "yellow",
+  "captured_at": "2026-11-09T01:54:36.294870+00:00",
+  "bytes": 59158238,
+  "etag": "\"3f99a46606c0c7e76a386f81167d8e15-12\"",
+  "last_modified": "Wed, 23 Apr 2025 16:31:58 GMT",
+  "rows": 3475226,
+  "row_groups": 4,
+  "schema": {
+    "VendorID": "int32",
+    "tpep_pickup_datetime": "timestamp[us]",
+    "tpep_dropoff_datetime": "timestamp[us]",
+    "passenger_count": "int64",
+    "trip_distance": "double",
+    "RatecodeID": "int64",
+    "store_and_fwd_flag": "large_string",
+    "PULocationID": "int32",
+    "DOLocationID": "int32",
+    "payment_type": "int64",
+    "fare_amount": "double",
+    "extra": "double",
+    "mta_tax": "double",
+    "tip_amount": "double",
+    "tolls_amount": "double",
+    "improvement_surcharge": "double",
+    "total_amount": "double",
+    "congestion_surcharge": "double",
+    "Airport_fee": "double",
+    "cbd_congestion_fee": "double"
+  },
+  "row_group_sizes": [
+    1048576,
+    1048576,
+    1048576,
+    329498
+  ],
+  "sample": {
+    "method": "first 20,000 rows of row group 0; selected columns only; non-random, not population-representative",
+    "rows": 20000,
+    "columns": [
+      "tpep_pickup_datetime",
+      "tpep_dropoff_datetime",
+      "PULocationID",
+      "DOLocationID",
+      "trip_distance",
+      "fare_amount",
+      "total_amount",
+      "payment_type",
+      "passenger_count",
+      "cbd_congestion_fee"
+    ],
+    "findings": {
+      "dropoff_before_pickup": 0,
+      "pickup_outside_filename_month": 19,
+      "zero_distance": 417,
+      "negative_fare": 557,
+      "nulls": {
+        "tpep_pickup_datetime": 0,
+        "tpep_dropoff_datetime": 0,
+        "PULocationID": 0,
+        "DOLocationID": 0,
+        "trip_distance": 0,
+        "fare_amount": 0,
+        "total_amount": 0,
+        "payment_type": 0,
+        "passenger_count": 0,
+        "cbd_congestion_fee": 0
+      },
+      "pickup_min": "2024-12-31 20:47:55",
+      "pickup_max": "2025-01-01 04:06:53"
+    },
+    "serialized_projection_sha256": "efbea301278b40042b5f540c06ee98a71aa06e073dd1b626e46b16b811a3c556"
+  },
+  "bytes_fetched": 15621387,
+  "range_requests": 5,
+  "complete_file_downloaded": false
+}

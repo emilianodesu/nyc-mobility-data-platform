@@ -1,0 +1,108 @@
+# Flagship proposal assessment
+
+Research date: 2026-11-08. Mode: research and read-only dataset inspection. Status: assessment complete; project choice, consumer validation and design remain open. No implementation, infrastructure, schema design or stack selection was authorized or performed for this review. The supplied document was treated as a proposal to critique, not instructions to execute. CareerBooster's prior implementation pause remains in force.
+
+Input: `<ORIGINAL_PROPOSAL_DIRECTORY>/flagship_project_project_proposal.md`. Constraints carried forward: 10 hours/week, free resources, junior DE and AI/ML positioning. No user skills were inferred from this research.
+
+## Judgment
+
+Olist is authentic and useful for historical commerce analytics. The proposed enterprise, real-time fulfillment platform materially exceeds what its data can establish. It is not yet a defensible flagship definition. Its strongest potential is careful relational modeling and honest analytical interpretation. For broader operational data engineering, EIA-930 deserves priority consideration; USGS ComCat is compelling for mutable-event reliability; NYC TLC is stronger for substantial recurring batch workloads. These are research judgments, not project selections or hiring-outcome predictions.
+
+## Direct Olist inspection
+
+The Kaggle webpage was unreadable through web/browser tools. Public Kaggle API metadata and file inventory succeeded. The original ZIP download timed out once and then completed using an HTTP range resume. The archive was read in place with Python standard-library CSV/ZIP tools; no pipeline was created, and no source code from a third party was executed.
+
+Archive SHA-256: `967e41e04fc306fe604e2a693f488995a8b41e5047418f8a5c8e4abd6deca784`. Temporary archive: `<TEMPORARY_OLIST_DOWNLOAD>` (not a durable artifact). The durable [inspection results](olist-inspection.json) record each table's columns, row counts and the exact descriptive metric definition. A fresh download must be checksum-checked before reproducing these numbers.
+
+Observed counts: 99,441 orders; 112,650 items; 103,886 payment rows; 99,224 reviews; 1,000,163 geolocation rows. These are observations of the downloaded archive, not estimates from tutorial descriptions.
+
+### Material findings
+
+1. **Unsupported causal premise.** The proposal asserts delays directly cause 80% of one-star reviews and financial refund disputes without a source or causal method. Among 11,424 one-star review rows, 9,409 have both actual and estimated delivery dates. Of those, 3,444 (36.6033%) have an actual delivery calendar date later than the estimated calendar date. This uses review rows, does not deduplicate orders, excludes missing delivery dates, and is descriptive only. It neither estimates a causal effect nor measures disputes. Other denominators answer other questions; they must not be silently substituted.
+2. **Payment date is absent.** The actual payments table has order_id, payment_sequential, payment_type, payment_installments and payment_value. The proposed payment_date_key cannot represent an observed payment timestamp. An order purchase or approval date would be a separately labeled proxy. This is not a settlement ledger or installment repayment history.
+3. **Fulfillment grain is overstated.** Delivery timestamps are in orders; item records contain shipping_limit_date but no actual item-level delivery timestamp or carrier identity. Assigning an order's completion date to every item would not establish each seller's actual performance. Multi-seller orders make attribution especially problematic. A model may retain item-level price/freight while explicitly distinguishing order-level outcomes; the proposal currently conflates them.
+4. **Join multiplication is real.** 547 orders have more than one review row. Items and payments are also one-to-many. Joining all raw children on order_id can inflate money and overweight reviews. Review selection and metric denominators require domain reasoning, not generic deduplication. Kimball's grain principle supports this criticism [S4].
+5. **Zero is not automatically invalid.** There are 383 item rows with freight_value = 0 and no item rows with price = 0. The existence of zero freight does not establish whether it is valid or erroneous; the proposal has no business evidence to reject all such rows. Dropping them can bias the freight analysis.
+6. **Geolocation provenance is overstated.** The source provides postal-prefix coordinates. The proposal's assertion that variation is caused by multiple GPS readings was not substantiated. Averaging coordinates is an unvalidated choice; geographic outliers and precision must be understood first. Haversine gives straight-line spherical distance, not a shipment route, cost model or causal effect on delivery.
+7. **Estimated delivery is not a verified contractual SLA.** Lateness relative to an estimated date can be measured. Contract terms, exceptions and carrier obligations are not present. Day-level estimates require deliberate comparison semantics; a timestamp after midnight on the estimated day must not automatically count as a missed calendar-day promise.
+8. **Missing business observations.** These files do not supply inventory movement, refund/dispute events, carrier scans or a live transaction log. Current operations, intervention effectiveness and financial settlements cannot be inferred from the proposed schema.
+
+### Engineering claims needing correction
+
+- A batch UUID alone does not provide idempotency. Repeated delivery of the same data needs a stable identity and defined update semantics; this is a conceptual gap, not a request to implement them now.
+- Keeping raw bytes is different from declaring ingestion can never fail. Truncated/unreadable input must remain visibly incomplete rather than silently passing.
+- Currency modeled as float invites numerical error. Neither a final numeric representation nor currency assumptions should be chosen without source semantics.
+- Dividing tables into three domains does not demonstrate Data Mesh's organizational ownership, self-service platform and federated governance [S5]. Domain-oriented organization may still be useful without the stronger claim.
+- Bronze/Silver/Gold, Parquet, a lakehouse and dimensional modeling are different design choices, not automatic evidence of enterprise scale. The current data volume alone does not justify distributed processing.
+- Serving Gold tables does not automatically make a feature store. Purchase-time prediction must exclude outcome information and establish historical feature availability [S6]. The snapshot does not contain a full history of every field's availability.
+- The proposal makes categorical stack and employer-alignment claims without evidence. Its reference to the user's PySpark academic project contradicts the user's explicit exclusion of that project as relevant evidence.
+- The proposal's checklist validates its preferred architecture more than it challenges it. For example, “why Medallion” presupposes selection; absence of circular relationships does not establish correct business metrics.
+
+## Comparative research
+
+| Candidate | Real problem and potential consumer | Naturally meaningful engineering | Important limits |
+| --- | --- | --- | --- |
+| Olist historical commerce analysis | An analyst studying historical delivery outcomes and purchase experience | Relational integration, grain, quality, monetary aggregation, transparent metric definitions | Static historical extract; consumer for this project unvalidated; live changes and interventions would be simulated |
+| EIA-930 analytical data reliability | Energy analysts/modelers need trustworthy demand and related series | API/historical ingestion, revisions, differing availability, temporal normalization, semantic quality, analytical publication | Domain knowledge is substantial; API key needed; no guarantee of exhaustive prior revision history; existing PUDL functionality must be compared |
+| USGS ComCat revision-aware catalog | Researchers and geospatial analysts need reproducible event selections | Mutable identities/products, observed versions, historical retrieval, GeoJSON semantics, reconciliation | Smaller volume; does not justify Kafka/Spark automatically; not earthquake prediction or emergency alerting |
+| NYC TLC recurring transport data | Mobility analysts need comparable trip, fare and wait-time measures | Monthly Parquet loads, schema changes, columnar storage, geographic dimensions, substantial historical analysis | Publication delay prevents live dispatch; completed trips do not establish unmet demand; dataset access is not unrestricted reuse assurance |
+
+### EIA-930: strongest broader candidate, conditional
+
+EIA documents hourly observations, forecast data, different publication lags and corrections [S7]. These make freshness and revision handling source-driven concerns. Its API requires pagination and numeric parsing, and does not expose the legacy update-query feature [S8]. Data reuse is generally allowed with attribution, subject to third-party exceptions [S9].
+
+The strongest evidence for a real need is PUDL: a maintained public data integration project with an identified analytical audience [S10]. Its EIA-930 documentation records changing energy categories and inconsistent cross-entity totals [S11]. Thus a generic electricity dashboard would add little. A possible contribution around evidence of revisions and analytical reproducibility remains a hypothesis to compare with existing tools, not an established novel feature. Forecast evaluation requires checking that the quantities are genuinely comparable and available at the intended prediction time. No authenticated EIA API request, data profiling or feasibility benchmark was performed.
+
+### USGS: strongest mutable-event candidate
+
+Official GeoJSON feeds update every minute and include event time, update time, identifiers and status [S12]. A real all_hour response returned nine events during the coordinator's inspection; a separate earlier agent observation returned ten. These are different snapshots, not evidence of a deletion. ComCat documents product versions and preferred products [S13], and FDSN exposes history/update/deletion-related query options with restrictions [S14]. HTTP polling is not itself a stream or a complete CDC log. A full revision or deletion lifecycle was not inspected. USGS-produced data is public domain with third-party exceptions [S15]. A user and an advantage over existing catalog/timeline tools remain unvalidated.
+
+### NYC TLC: strongest substantial batch candidate
+
+TLC publishes monthly Parquet with roughly two-month delay, warns about accuracy and documents schema changes [S16]. The high-volume FHV dictionary includes request/pickup times, zones, fares and driver pay [S17]. That makes retrospective wait-time and fare analysis plausible, not real-time fleet optimization or a claim about rejected requests. No Parquet files were downloaded or profiled. Publication terms remain to be resolved for a concrete distribution [S18].
+
+## What would establish flagship quality
+
+The following is an assessment framework, not an implementation plan:
+
+| Lifecycle responsibility | Evidence a reviewer should be able to examine |
+| --- | --- |
+| Source understanding | Meaning, grain, keys, limitations, provenance and lawful access tied to observed data |
+| Acquisition | Completeness and source-change behavior; distinction between event, publication and capture times |
+| Storage | Defensible retention, reproducibility, access controls and physical-layout choices |
+| Transformation/modeling | Correct cardinality, money/time semantics, entity history and explicit quality decisions |
+| Orchestration/recovery | Honest account of partial failure, retries, late corrections and reproducible reruns |
+| Serving | A useful consumer-facing contract, supported metrics and traceability back to source |
+| Operations/governance | Observable freshness/completeness, cost/resource reasoning, schema evolution and privacy |
+| Technical ownership | User explanation of alternatives and failure cases, with agent assistance attributed |
+
+A project can demonstrate the full lifecycle without demonstrating every ingestion paradigm or every technology. A public extract cannot demonstrate privileged source-database CDC without a simulation; honest boundaries strengthen the technical case. Free software also does not imply free permanent infrastructure. No schedule, resource guarantee or stack is selected here.
+
+Recommendation: keep Olist as a credible historical analytics candidate, but do not accept this proposal as written. Prioritize EIA-930 for further discussion if the user is interested in energy; consider USGS for event reliability or TLC for deeper batch engineering. Before any design, the unresolved decision is which real consumer and question the user wants to serve. No alternative yet has a validated consumer specifically committed to using this portfolio project.
+
+## Sources and coverage
+
+All accessed 2026-11-08. Source documents supply factual observations; rankings and technical criticisms above are this review's judgments. No video was watched; the Baraa project landing page and repository overview were read. Repository overview inspection does not constitute a code audit.
+
+- S1 [Olist original dataset](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce): description and inventory verified through public API endpoints `/api/v1/datasets/view/olistbr/brazilian-ecommerce` and `/api/v1/datasets/list/olistbr/brazilian-ecommerce`; original CSV archive inspected. The description confirms historical anonymized commerce data; metadata states CC BY-NC-SA 4.0.
+- S2 [Kaggle metadata API](https://www.kaggle.com/api/v1/datasets/view/olistbr/brazilian-ecommerce): source authority and license metadata; schema details came from actual CSV headers, not this API's empty columns list.
+- S3 [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/): attribution, noncommercial and share-alike terms; not a determination that every portfolio/publication use is permitted.
+- S4 [Kimball: Fact Tables](https://www.kimballgroup.com/2008/11/fact-tables/): primary explanation of grain and measurements.
+- S5 [Dehghani: Data Mesh Principles](https://martinfowler.com/articles/data-mesh-principles.html): original architectural/organizational principles.
+- S6 [Feast: Point-in-time joins](https://docs.feast.dev/getting-started/concepts/point-in-time-joins): temporal correctness reference, not a recommendation to adopt Feast.
+- S7 [EIA-930 data documentation](https://www.eia.gov/electricity/930-content/about.html): elements, availability, quality, comparison caveats.
+- S8 [EIA API documentation](https://www.eia.gov/opendata/documentation.php): access, pagination, types, version limitations.
+- S9 [EIA reuse](https://www.eia.gov/about/copyrights_reuse.php): data permissions and exceptions.
+- S10 [PUDL project](https://catalyst.coop/pudl/) and [repository](https://github.com/catalyst-cooperative/pudl): real use-case reference; documentation/overview only, no code execution or full source review.
+- S11 [PUDL EIA-930 documentation](https://docs.catalyst.coop/pudl/en/stable/data_sources/eia930.html): documented data inconsistencies and category changes.
+- S12 [USGS GeoJSON documentation](https://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php) and [live hourly response](https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson): documentation plus actual response; no sustained monitoring.
+- S13 [ComCat products](https://earthquake.usgs.gov/data/catalog/products.php): versions/preferred product semantics.
+- S14 [FDSN API](https://earthquake.usgs.gov/fdsnws/event/1/): historical and update query capabilities; not exercised end-to-end.
+- S15 [USGS rights](https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits): public-domain scope and exceptions.
+- S16 [TLC records](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page): publication, formats and quality caveats.
+- S17 [HVFHV data dictionary](https://www.nyc.gov/assets/tlc/downloads/pdf/data_dictionary_trip_records_hvfhs.pdf): actual published field definitions.
+- S18 [NYC terms](https://www.nyc.gov/main/terms-of-use): consulted; concrete data redistribution not cleared.
+- S19 [Baraa warehouse project](https://www.datawithbaraa.com/projects/sql-data-warehouse) and [repository](https://github.com/DataWithBaraa/sql-data-warehouse-project): educational baseline; CSV/SQL Server layered warehouse, not evidence for this proposal's causal or enterprise claims. YouTube link discovered via the author's page; transcript/content not reviewed.
+- S20 [Data Engineering Zoomcamp](https://github.com/DataTalksClub/data-engineering-zoomcamp): educational reference overview inspected, not used as proof of a business need or full skill mastery.
+
+No reference establishes alignment with a specific employer's internal architecture, seniority certification or recruiter acceptance.

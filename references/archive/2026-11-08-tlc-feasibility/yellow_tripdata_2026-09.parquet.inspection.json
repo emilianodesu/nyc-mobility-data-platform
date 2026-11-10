@@ -1,0 +1,80 @@
+{
+  "url": "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2026-09.parquet",
+  "period": "2026-09",
+  "kind": "yellow",
+  "captured_at": "2026-11-09T01:55:40.011143+00:00",
+  "bytes": 67374896,
+  "etag": "\"bb076c34e09314350f112e445a7ad37a-4\"",
+  "last_modified": "Thu, 29 Oct 2026 13:56:04 GMT",
+  "rows": 3876044,
+  "row_groups": 4,
+  "schema": {
+    "VendorID": "int32",
+    "tpep_pickup_datetime": "timestamp[us]",
+    "tpep_dropoff_datetime": "timestamp[us]",
+    "passenger_count": "int64",
+    "trip_distance": "double",
+    "RatecodeID": "int64",
+    "store_and_fwd_flag": "large_string",
+    "PULocationID": "int32",
+    "DOLocationID": "int32",
+    "payment_type": "int64",
+    "fare_amount": "double",
+    "extra": "double",
+    "mta_tax": "double",
+    "tip_amount": "double",
+    "tolls_amount": "double",
+    "improvement_surcharge": "double",
+    "total_amount": "double",
+    "congestion_surcharge": "double",
+    "Airport_fee": "double",
+    "cbd_congestion_fee": "double",
+    "request_source": "large_string"
+  },
+  "row_group_sizes": [
+    1048576,
+    1048576,
+    1048576,
+    730316
+  ],
+  "sample": {
+    "method": "first 20,000 rows of row group 0; selected columns only; non-random, not population-representative",
+    "rows": 20000,
+    "columns": [
+      "tpep_pickup_datetime",
+      "tpep_dropoff_datetime",
+      "PULocationID",
+      "DOLocationID",
+      "trip_distance",
+      "fare_amount",
+      "total_amount",
+      "payment_type",
+      "passenger_count",
+      "cbd_congestion_fee"
+    ],
+    "findings": {
+      "dropoff_before_pickup": 0,
+      "pickup_outside_filename_month": 2,
+      "zero_distance": 282,
+      "negative_fare": 105,
+      "nulls": {
+        "tpep_pickup_datetime": 0,
+        "tpep_dropoff_datetime": 0,
+        "PULocationID": 0,
+        "DOLocationID": 0,
+        "trip_distance": 0,
+        "fare_amount": 0,
+        "total_amount": 0,
+        "payment_type": 0,
+        "passenger_count": 0,
+        "cbd_congestion_fee": 0
+      },
+      "pickup_min": "2026-08-31 23:46:38",
+      "pickup_max": "2026-09-04 00:00:52"
+    },
+    "serialized_projection_sha256": "662fd3ad1471dcd7be8c63aff885bd08bd30bdbe9530ce849616905a46c6e5cd"
+  },
+  "bytes_fetched": 15963393,
+  "range_requests": 5,
+  "complete_file_downloaded": false
+}

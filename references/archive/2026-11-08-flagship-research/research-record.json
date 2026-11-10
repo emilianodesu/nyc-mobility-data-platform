@@ -1,0 +1,30 @@
+{
+  "operation": "scouting_research_review",
+  "status": "assessment_complete_selection_open",
+  "date": "2026-11-08",
+  "input_path": "<ORIGINAL_PROPOSAL_DIRECTORY>/flagship_project_project_proposal.md",
+  "input_sha256": "a887255704c2c78d75c2751925979842ce06ccbca7663b13909210998a4f3527",
+  "scope": "Read-only primary-source research and Olist CSV inspection; no project implementation or plan",
+  "artifacts": {
+    "olist-inspection.json": "46d05ed321deabf22230c6ba1197150a9f06380457bf4c0d10da3d62f579c653",
+    "ASSESSMENT.md": "91bda7b42545e1a1f0508fa12d4790bd2322cee5336dbb1e01415193aa4c4f2a"
+  },
+  "canonical_snapshot_used": null,
+  "skill_maturity_changed": false,
+  "constraints": {
+    "hours_per_week": 10,
+    "resources": "free",
+    "implementation": "paused"
+  },
+  "pending": [
+    "User interest and concrete consumer",
+    "Candidate selection",
+    "Alternative data profiling and access checks",
+    "Existing-solution gap validation"
+  ],
+  "rule_families": [
+    "SCP",
+    "SYS-02",
+    "SOT-07"
+  ]
+}

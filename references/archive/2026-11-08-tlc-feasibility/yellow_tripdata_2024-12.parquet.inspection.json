@@ -1,0 +1,76 @@
+{
+  "url": "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2024-12.parquet",
+  "period": "2024-12",
+  "kind": "yellow",
+  "captured_at": "2026-11-09T01:54:36.294636+00:00",
+  "bytes": 61524085,
+  "etag": "\"485c9d3e08117991f3d9788c016798b4-4\"",
+  "last_modified": "Fri, 21 Feb 2025 21:29:11 GMT",
+  "rows": 3668371,
+  "row_groups": 4,
+  "schema": {
+    "VendorID": "int32",
+    "tpep_pickup_datetime": "timestamp[us]",
+    "tpep_dropoff_datetime": "timestamp[us]",
+    "passenger_count": "int64",
+    "trip_distance": "double",
+    "RatecodeID": "int64",
+    "store_and_fwd_flag": "large_string",
+    "PULocationID": "int32",
+    "DOLocationID": "int32",
+    "payment_type": "int64",
+    "fare_amount": "double",
+    "extra": "double",
+    "mta_tax": "double",
+    "tip_amount": "double",
+    "tolls_amount": "double",
+    "improvement_surcharge": "double",
+    "total_amount": "double",
+    "congestion_surcharge": "double",
+    "Airport_fee": "double"
+  },
+  "row_group_sizes": [
+    1048576,
+    1048576,
+    1048576,
+    522643
+  ],
+  "sample": {
+    "method": "first 20,000 rows of row group 0; selected columns only; non-random, not population-representative",
+    "rows": 20000,
+    "columns": [
+      "tpep_pickup_datetime",
+      "tpep_dropoff_datetime",
+      "PULocationID",
+      "DOLocationID",
+      "trip_distance",
+      "fare_amount",
+      "total_amount",
+      "payment_type",
+      "passenger_count"
+    ],
+    "findings": {
+      "dropoff_before_pickup": 0,
+      "pickup_outside_filename_month": 26,
+      "zero_distance": 413,
+      "negative_fare": 560,
+      "nulls": {
+        "tpep_pickup_datetime": 0,
+        "tpep_dropoff_datetime": 0,
+        "PULocationID": 0,
+        "DOLocationID": 0,
+        "trip_distance": 0,
+        "fare_amount": 0,
+        "total_amount": 0,
+        "payment_type": 0,
+        "passenger_count": 0
+      },
+      "pickup_min": "2024-11-30 22:31:24",
+      "pickup_max": "2024-12-01 11:01:58"
+    },
+    "serialized_projection_sha256": "9698200bf48f60d97c76b628aeadd10b874721fb13f9cb0a736f914fdeed5c7e"
+  },
+  "bytes_fetched": 15198284,
+  "range_requests": 4,
+  "complete_file_downloaded": false
+}

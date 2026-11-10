@@ -1,0 +1,360 @@
+{
+  "format_version": 1,
+  "date": "2026-11-09",
+  "purpose": "portable documentation and research handoff; no implementation",
+  "structure_sources": [
+    "https://arc42.org/overview/",
+    "https://c4model.com/diagrams",
+    "https://adr.github.io/",
+    "https://cookiecutter-data-science.drivendata.org/"
+  ],
+  "self_excluded": true,
+  "active_markdown_links_checked": 140,
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 1194,
+      "sha256": "99df52cf3397513b23913a6867513fcac0176bf4b44428f455b10bbaef4e8690"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "bytes": 1373,
+      "sha256": "72a427cb28cb342ae195002a018a382dd8eefbe1d5df4b660ec7ecc9a4d2976f"
+    },
+    {
+      "path": "README.md",
+      "bytes": 2709,
+      "sha256": "a2c45e8b81b07bdfe831dc295ee3b05a79db79a0bf019465779031f9d7302c43"
+    },
+    {
+      "path": "START-HERE.md",
+      "bytes": 2977,
+      "sha256": "7e1e9648224ebedc114ede8e88f41d4802620ffda87b3f692b3e66b32fe91637"
+    },
+    {
+      "path": "docs/README.md",
+      "bytes": 1864,
+      "sha256": "d253cb5ed42925b795979b5ccb115a76546c87b15c572ce1c22aea3e848f343c"
+    },
+    {
+      "path": "docs/architecture/arc42-index.md",
+      "bytes": 1599,
+      "sha256": "766de1dc3dfb64a0d7ba1f44a1b9be236cee7531a59e833975db69013138d44b"
+    },
+    {
+      "path": "docs/architecture/decisions/0001-monthly-source-and-semantic-boundary.md",
+      "bytes": 1249,
+      "sha256": "313184a5de75d044153c830068f9699a0d7b57a3da947902dd5401c00a852cc2"
+    },
+    {
+      "path": "docs/architecture/decisions/0002-local-native-analytical-storage.md",
+      "bytes": 1281,
+      "sha256": "52cfde1048c5bb6912f0b9bafd6740a383e947cc030d436aaecdadb9c991f4f4"
+    },
+    {
+      "path": "docs/architecture/decisions/0003-immutable-releases-and-selection.md",
+      "bytes": 1228,
+      "sha256": "74a88b955dcb6f4bf8e73213b552cfcb95a796ece6bec0382dd5cd69efb7174b"
+    },
+    {
+      "path": "docs/architecture/decisions/0004-quality-and-recorded-intervals.md",
+      "bytes": 1289,
+      "sha256": "a513d2e69b6188069c00814c9d70185ddfe269edf2d434bc51485fa3760d980b"
+    },
+    {
+      "path": "docs/architecture/decisions/0005-orchestration-and-consumer.md",
+      "bytes": 1206,
+      "sha256": "bacf2a5c6c38dc22aed40760809b6262a54456073df307cdee98d7839a56078b"
+    },
+    {
+      "path": "docs/architecture/decisions/README.md",
+      "bytes": 760,
+      "sha256": "ade4e3fac618801c8c5bf410be563327889640fac483f98243e27b9c8e2bde18"
+    },
+    {
+      "path": "docs/architecture/deployment-context.md",
+      "bytes": 1698,
+      "sha256": "77fbc22f66d97d84671514516092d6228046103f28f4a88bba878812cef7b71f"
+    },
+    {
+      "path": "docs/architecture/diagrams.md",
+      "bytes": 3205,
+      "sha256": "93babc1ed1dbcf5a1a739bfcb7c4aea66e6818981d86602691cb2b7881a9a873"
+    },
+    {
+      "path": "docs/architecture/low-level-design.md",
+      "bytes": 25541,
+      "sha256": "fe0a960cafb155b483192b57f501ea5cf7553928b562e57bc872aa47babba72b"
+    },
+    {
+      "path": "docs/architecture/overview.md",
+      "bytes": 17118,
+      "sha256": "eecbcee05a6c39e29223f5cea55cda43b0eafefb26bf263458b5964eeeabace5"
+    },
+    {
+      "path": "docs/architecture/risks.md",
+      "bytes": 2198,
+      "sha256": "56a52d8ba4838366f33bcabd5e082202ec5e06260112b6f19f5bdbf5dad9d681"
+    },
+    {
+      "path": "docs/delivery/implementation-sequence.md",
+      "bytes": 2109,
+      "sha256": "73e1406b4ff0a70ece3ac63910c0196a743e7e6de03273357fb943b24306b998"
+    },
+    {
+      "path": "docs/delivery/package-manifest.json",
+      "bytes": 104,
+      "sha256": "cd606448cd922f978a078487bba2be492c14053f77decb3ab2968b82fc057464"
+    },
+    {
+      "path": "docs/delivery/repository-handoff.md",
+      "bytes": 4843,
+      "sha256": "c0415ed4286dd41732c98b9b036e224f7ef74efced1192d2ab1ead8b65f5a02c"
+    },
+    {
+      "path": "docs/delivery/structure-research.md",
+      "bytes": 2349,
+      "sha256": "0712d5e6a1765785ea5a7f478587fe4e2c33fc1fa9e362afff9785ad95b9826c"
+    },
+    {
+      "path": "docs/evidence/source-register.md",
+      "bytes": 2258,
+      "sha256": "3738dd6e09750ed55640059c299ebc000662c077fd3a39f7c4c4b067b35a6f08"
+    },
+    {
+      "path": "docs/evidence/source-research.md",
+      "bytes": 2561,
+      "sha256": "d1d6f60fdeb4b5f0f3c1e1222e117f95bd5314240105eff58ba744c24c0bb612"
+    },
+    {
+      "path": "docs/reference/data-contracts.md",
+      "bytes": 13937,
+      "sha256": "f8d64cdd0e888efbb1a919fe1fa588bfcd7993555c06352bb59a2230df30d8bd"
+    },
+    {
+      "path": "docs/reference/glossary.md",
+      "bytes": 1833,
+      "sha256": "07ed10561fc47d6d3fe2e4c14b82822bc6302385b616e2d2cf0a7bb3865ffacf"
+    },
+    {
+      "path": "docs/reference/interfaces-and-operations.md",
+      "bytes": 19582,
+      "sha256": "be637a9d082f252e7775c49d5214547b6be5723aadcaff985ce6f89f8e0e108e"
+    },
+    {
+      "path": "docs/requirements.md",
+      "bytes": 8394,
+      "sha256": "a04b15a41ba6732b6675a462122034f2261512b54438a70b621e5beebd44f445"
+    },
+    {
+      "path": "docs/verification/acceptance-plan.md",
+      "bytes": 9728,
+      "sha256": "39ed1301eedc541e1357dddb72941a3fea6e5f878afcc588270b0f11cd5ee4a7"
+    },
+    {
+      "path": "docs/verification/design-review.md",
+      "bytes": 3931,
+      "sha256": "0d929ddf833703722c8fa4ec60fc1194cc2fe437db07d5f37ab31352d64dbcc9"
+    },
+    {
+      "path": "docs/verification/package-review.md",
+      "bytes": 4029,
+      "sha256": "534d178ad04c20ebc8adc8c46db63c7ca1c13cbcf177cd3e432a7b514a52ec17"
+    },
+    {
+      "path": "docs/verification/review-checklist.md",
+      "bytes": 1391,
+      "sha256": "1e0be23ef61ce5f368fed1b2ad5b706cbff63b5165cadd9f52e6c156c0ffede6"
+    },
+    {
+      "path": "docs/verification/technical-readiness.md",
+      "bytes": 6771,
+      "sha256": "c87f682b33960ea42d586e9ae6714274dedcbdf9a17f4776ee1c3af311ba7174"
+    },
+    {
+      "path": "docs/verification/walkthrough-results.md",
+      "bytes": 4800,
+      "sha256": "d4c74c5c5536b8ff37d30fdb7f62326b0e23efb8b3806d7848dfa3e3ddc2c959"
+    },
+    {
+      "path": "docs/verification/zip-export-review.md",
+      "bytes": 1757,
+      "sha256": "0d45a970ef25ab44c13d1e9299975466fe2819d3f7e57bda9721efeb359f9753"
+    },
+    {
+      "path": "references/README.md",
+      "bytes": 1593,
+      "sha256": "c8d91c6c5654565e4229ac6c7bc2b880bdbe9e2ff3e4239892892ddfb555c8df"
+    },
+    {
+      "path": "references/archive/2026-11-08-flagship-research/ASSESSMENT.md.txt",
+      "bytes": 17101,
+      "sha256": "a28a17a1ef664b66e17020c6eccc5e714fcce1db289abb536da251e69ce7925c"
+    },
+    {
+      "path": "references/archive/2026-11-08-flagship-research/olist-inspection.json",
+      "bytes": 2964,
+      "sha256": "424b31bb1c67cbd9f14f7436c917e51742cef5468848c3b7669c8698f286292b"
+    },
+    {
+      "path": "references/archive/2026-11-08-flagship-research/research-record.json",
+      "bytes": 1028,
+      "sha256": "f910bff4512d577e15416c6ac3faecc3b3b8f2d018fe7ff8c2ce9209a38363d2"
+    },
+    {
+      "path": "references/archive/2026-11-08-tlc-feasibility/FINDINGS.md.txt",
+      "bytes": 10183,
+      "sha256": "981778a8599745533a2c88a6bc1df23bde80b8d4695920545d3c148500b1ab48"
+    },
+    {
+      "path": "references/archive/2026-11-08-tlc-feasibility/fhvhv_tripdata_2024-12.parquet.inspection.json",
+      "bytes": 2635,
+      "sha256": "f8a0a7ddccc026408affb00188eedfca45002eeb6311e77a3feb3815fefe0fb5"
+    },
+    {
+      "path": "references/archive/2026-11-08-tlc-feasibility/fhvhv_tripdata_2025-01.parquet.inspection.json",
+      "bytes": 2721,
+      "sha256": "cdf9c73440952476c64f1c7390d66533d1ebad513f6581b2c936b331741deba8"
+    },
+    {
+      "path": "references/archive/2026-11-08-tlc-feasibility/fhvhv_tripdata_2026-09.parquet.inspection.json",
+      "bytes": 2732,
+      "sha256": "88541eb77f93c1923c7397aaf73474dd48831c3e64d28fe343ec35316ff6a05a"
+    },
+    {
+      "path": "references/archive/2026-11-08-tlc-feasibility/inspection_worksheet.py.txt",
+      "bytes": 4701,
+      "sha256": "b577d9e1e8e7c1229b6458e902e672cb897deac1adf73227c45461e83eedfee0"
+    },
+    {
+      "path": "references/archive/2026-11-08-tlc-feasibility/research-record.json",
+      "bytes": 1869,
+      "sha256": "49572e97c1f8d8074bae9aface0773fd9ccf52730204bbfd4b397c5a4dd461ca"
+    },
+    {
+      "path": "references/archive/2026-11-08-tlc-feasibility/taxi_zone_lookup.csv",
+      "bytes": 12330,
+      "sha256": "29632c372b4333023f831dd1725a5c802d03fd81b0786e4bd075c22c6431a76e"
+    },
+    {
+      "path": "references/archive/2026-11-08-tlc-feasibility/yellow_tripdata_2024-12.parquet.inspection.json",
+      "bytes": 2174,
+      "sha256": "3f96c664c271f9712821380e80ffc376dc4188b1302e278beb9ed9ad559d6335"
+    },
+    {
+      "path": "references/archive/2026-11-08-tlc-feasibility/yellow_tripdata_2025-01.parquet.inspection.json",
+      "bytes": 2272,
+      "sha256": "5df77963a4abaf48a81eeb94e0e6d85cd85dfbba975042c1a29dd8b6d630f19d"
+    },
+    {
+      "path": "references/archive/2026-11-08-tlc-feasibility/yellow_tripdata_2026-09.parquet.inspection.json",
+      "bytes": 2308,
+      "sha256": "1895b5799c5888eac9aa6db072b5621caccfe2d67510803ca84328a12e2c3bbf"
+    },
+    {
+      "path": "references/archive/2026-11-08-tlc-feasibility/zone-inspection.json",
+      "bytes": 594,
+      "sha256": "ad584dae50906d82d277cb8ee90e37342ccde079c4c171926f13ff3a9694bfbb"
+    },
+    {
+      "path": "references/archive/2026-11-09-hvfhv-architecture/2024-12-extended.json",
+      "bytes": 1089,
+      "sha256": "f6c06a08ab083fb5c8f50518da3441c98780c85a380b7ad98cb410b6c07100fd"
+    },
+    {
+      "path": "references/archive/2026-11-09-hvfhv-architecture/2025-01-extended.json",
+      "bytes": 1118,
+      "sha256": "12dfd9c1836bba1adbe35dc45c8d1ec648284ecb924240cfe8f843e042567c7e"
+    },
+    {
+      "path": "references/archive/2026-11-09-hvfhv-architecture/2026-09-extended.json",
+      "bytes": 3341,
+      "sha256": "613895c8114807180cc536c853335f5253ad091994809778e08f9fba4214efb8"
+    },
+    {
+      "path": "references/archive/2026-11-09-hvfhv-architecture/ARCHITECTURE-REVIEW.md.txt",
+      "bytes": 16207,
+      "sha256": "b4d2d3afa8069dc44b63089a8ebfc40683290e8dc90a22197be6b37688d75209"
+    },
+    {
+      "path": "references/archive/2026-11-09-hvfhv-architecture/inspection_worksheet.py.txt",
+      "bytes": 3378,
+      "sha256": "bfb94b782173047d864bb9cd32ba52eae5aca10cab3aeede32346729bca97d24"
+    },
+    {
+      "path": "references/archive/2026-11-09-hvfhv-architecture/prior_inspection_reference.py.txt",
+      "bytes": 4701,
+      "sha256": "b577d9e1e8e7c1229b6458e902e672cb897deac1adf73227c45461e83eedfee0"
+    },
+    {
+      "path": "references/archive/2026-11-09-hvfhv-architecture/research-record.json",
+      "bytes": 1622,
+      "sha256": "3228a435b5e50c8c5aa888999275b1e2874596aac259b717817658eb06bb3a09"
+    },
+    {
+      "path": "references/archive/design-history/ARCHITECTURE-v1.md.txt",
+      "bytes": 17164,
+      "sha256": "62b758ecc30f893e2760e212b3b930d0fc6b5d30dd34ccf9fbb9f6f9f102750b"
+    },
+    {
+      "path": "references/archive/design-history/DATA-CONTRACTS-v1.md.txt",
+      "bytes": 13970,
+      "sha256": "5f0209fc44d2f2c16c482211475dfaae1e307740c28f048aadd2f6736d0d1b01"
+    },
+    {
+      "path": "references/archive/design-history/DESIGN-VERIFICATION-v1.md.txt",
+      "bytes": 3913,
+      "sha256": "787347183cba6f51ef55cc80eefc2e4ef8c5c8d565f7f97fbbcf9e801edf73f6"
+    },
+    {
+      "path": "references/archive/design-history/LOW-LEVEL-DESIGN-v1.md.txt",
+      "bytes": 25509,
+      "sha256": "b3fcca0d6b9ede70a10119427f41c3328de10697b322423d91c9162a8553ae93"
+    },
+    {
+      "path": "references/archive/design-history/OPERATIONS-DESIGN-v1.md.txt",
+      "bytes": 19539,
+      "sha256": "d5e367cd36334a961c7396c6fce64b8399afd4a2187cb71a632cb51e27ed010e"
+    },
+    {
+      "path": "references/archive/design-history/README.md.txt",
+      "bytes": 2208,
+      "sha256": "e98078748b6834826d12b30476d6243de4389c09471fcb5f5a94509831e1f0cf"
+    },
+    {
+      "path": "references/archive/design-history/REPOSITORY-HANDOFF-v1.md.txt",
+      "bytes": 4843,
+      "sha256": "c0415ed4286dd41732c98b9b036e224f7ef74efced1192d2ab1ead8b65f5a02c"
+    },
+    {
+      "path": "references/archive/design-history/REQUIREMENTS-v1.md.txt",
+      "bytes": 8386,
+      "sha256": "50e0ad3dc93539e808b373a9259280b19ca280c1facceab2a68d741f84ffbcb0"
+    },
+    {
+      "path": "references/archive/design-history/TECHNICAL-READINESS-v1.md.txt",
+      "bytes": 6780,
+      "sha256": "0679bc8a50c10718ba60993ce197312a55fcc9d022b9d7b275e6593ca6ac0d27"
+    },
+    {
+      "path": "references/archive/design-history/VERIFICATION-PLAN-v1.md.txt",
+      "bytes": 9708,
+      "sha256": "0029430078013f7f4674ab844bf03ea0e6aa65e0d5afaff8891d2c207d252463"
+    },
+    {
+      "path": "references/archive/design-history/WALKTHROUGH-RESULTS-v1.md.txt",
+      "bytes": 4800,
+      "sha256": "d4c74c5c5536b8ff37d30fdb7f62326b0e23efb8b3806d7848dfa3e3ddc2c959"
+    },
+    {
+      "path": "references/archive/prior-package-manifest.json",
+      "bytes": 8254,
+      "sha256": "0a0b6f7cc2021bc21864c5ac6661256ca41a2ebff0eae10efff1e1c48b656f54"
+    },
+    {
+      "path": "references/archive-inventory.json",
+      "bytes": 12929,
+      "sha256": "1d17c54c785c28fb47fffe8d4b7ff1f7f735b37b0f80530e2863811f2254a1d7"
+    }
+  ]
+}

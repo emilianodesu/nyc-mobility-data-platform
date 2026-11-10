@@ -1,0 +1,76 @@
+# HVFHV — Verification and implementation gates v1
+
+Date: 2026-11-09. This is a future execution specification. No tests below have run, no pipeline exists from this task, and no deployment is authorized by this document. Parent: [low-level design](../architecture/low-level-design.md); rules: [data contracts](../reference/data-contracts.md).
+
+## 1. Evidence tiers
+
+1. Small synthetic fixtures establish code behavior, never TLC prevalence or user mastery.
+2. Real selected row groups exercise observed schemas and semantics; retain exact locators and label nonrandom coverage.
+3. A complete real monthly object establishes end-to-end completeness at monthly scale.
+4. The configured 12-month workload and retained releases establish actual target-scale resource feasibility.
+
+No lower tier substitutes for a higher one. Logical reconstruction is tested separately from byte-for-byte file identity. Independent verification reports PASS/FAIL/PENDING, exact command/configuration, artifact hashes, input coverage and environmental limits.
+
+## 2. Required scenarios
+
+| ID | Scenario | Acceptance oracle |
+| --- | --- | --- |
+| T01 | Truncated download / mid-stream timeout | No accepted revision or selection; prior release usable; bounded restart |
+| T02 | Same URL and exact bytes acquired twice | One source revision; no duplicate contribution |
+| T03 | Same URL changes bytes; metadata validators absent/unchanged | Explicit full revalidation detects hash change; old contribution replaced |
+| T04 | HTTP 404, 429, 5xx and TLS failure | Correct unavailable/retry/failure classification; no TLS bypass or invented data |
+| T05 | 24→25 source schema, added unknown field, wrong timestamp type | Supported migration preserved; unexpected schema blocks |
+| T06 | Exact equal rows and repeated ingestion | Equal observations retained with distinct locators; repeated ingestion does not inflate |
+| T07 | Different batch sizes and row groups | Same source physical locators and normalized values |
+| T08 | Missing, negative, zero and fractional intervals | Exact class counts and fractional arithmetic; no repaired values |
+| T09 | Off-month events, DST-like naive times, absent month | Event/source dates distinct; no unsupported UTC inference; absence not zero |
+| T10 | Zone revision, duplicate zone IDs and unknown IDs | Invalid dimension blocks; changed reference invalidates all dependents; unmatched facts retained |
+| T11 | NaN/Inf/negative money or distance, unknown codes | Typed findings preserved; no crash or silent normalization |
+| T12 | Empty, singleton and multi-group quantiles | NULL/identity/exact continuous reference values; merged p95 not averaged |
+| T13 | Incremental revision/window advance vs full rebuild | Same contribution sets, counts, qualifications, profiles and metrics under same input plan |
+| T14 | Rule removed/errored or SQL/config version changed | Incomplete inventory blocks; new derivation required; no stale pass reuse |
+| T15 | Two writers via CLI/Dagster | One holds writer lock; second exits boundedly without modifying artifacts |
+| T16 | Kill during ingestion/SQL/checkpoint | No selected partial database; retry fresh candidate from verified inputs |
+| T17 | Kill before/after directory finalization and before selection | Orphan reported; current unchanged; no automatic orphan publication |
+| T18 | Kill after SQLite commit before acknowledgement | Reconciliation finds committed event; retry does not duplicate selection |
+| T19 | Parent/generation changed and rollback requested | Stale compare-and-swap rejected; rollback verifies bytes and increments generation |
+| T20 | Corrupted raw/release/manifest or path escape | Integrity failure before use; no silent fallback or trusted registry-only approval |
+| T21 | Reader active while new release selected | Query/cache pins old complete release; refresh obtains new; no mixed versions |
+| T22 | Disk/spill/RSS exhaustion and cleanup preview | Candidate fails safely; no automatic data deletion or silent scope reduction |
+| T23 | Environment off then resumed | Missing source periods reconciled; no promise of uptime during shutdown |
+| T24 | Registry migration on a copy and restore | Integrity/FK checks pass; old backup restorable; released artifacts unchanged |
+| T25 | New month appears after an unavailable month; workstation skipped several ticks | Discovery checks full frontier; latest proposed consecutive window has explicit gaps; current never silently advances across missing inputs |
+| T26 | WARN/FAIL versus WARN/ERROR; forbidden NOT_APPLICABLE | Semantic exceptions remain publishable and visible; computation errors and unsupported skips block |
+| T27 | Pinned/cached release is explicitly rejected during a query | Render/export rechecks eligibility outside cache; completed results withheld; no automatic replacement selection |
+| T28 | Many filter combinations and oversized aggregate output | Cache/query bounds enforced with visible narrowing/pagination; no silent sampling; combined RSS measured |
+| T29 | Crash between original finalization and registration; identical digest destination already exists | Verified original with acquisition provenance safely registered/reused; missing provenance remains unassigned; no overwrite or implicit frozen-plan change |
+
+Process kill tests are not power-cut tests. Assert only demonstrated crash classes. Power-loss durability remains explicitly unsupported until a safe dedicated host/filesystem validation is designed and performed; no destructive power interruption of the user's workstation.
+
+## 3. Implementation sequence, after design review
+
+| Gate | Deliverable | Required evidence before proceeding |
+| --- | --- | --- |
+| G0 — compatibility | Dedicated environment and exact dependency lock, supported host tuple | Clean install/imports, DuckDB Arrow ingestion/checkpoint/readonly support, Dagster local job and Streamlit launch; verify Python support from package metadata, do not reuse CareerBooster Python by assumption |
+| G1 — trustworthy acquisition | Source manifests, registry, bounded HTTP and provenance | T01–T07 and T29 on fixtures and real reference schemas; no consumer/publication yet |
+| G2 — monthly vertical slice | Full monthly raw → model → profiles → candidate metrics | Complete row reconciliation; real negative/null/zone findings; T08–T12; CPU/time/RSS/disk measurement |
+| G3 — publication safety | Frozen releases, selection transaction, recovery/rollback | T14–T20, T24 and T26 with independent failure injection; exact untested durability boundaries recorded |
+| G4 — scale and incremental correctness | Source revision replacement, full rebuild comparison and 12-month plan | T13/T15/T22; measure current+two retained releases plus candidate/spill under 80 GiB; amend architecture if infeasible |
+| G5 — end-to-end consumer | Read-only reliability and interval views, on-demand and scheduled operations | T21/T23/T25/T27/T28, exact query denominator checks, local review of both views and reproducible instructions |
+| G6 — portfolio evidence | Decision records, measurements, lineage examples, failure/recovery walkthrough | Independent acceptance report, all unresolved findings visible, user explanation of decisions separate from agent contribution |
+
+Do not build infrastructure or write broad test suites before G0 confirms compatibility and G1/G2 ground behavior in actual inputs. Tests are targeted to specified invariants alongside implementation. No public hosting, repository archival, automatic publishing or new services are part of these gates.
+
+Initial dependency selection is a bounded compatibility investigation: choose a mutually supported Python minor, pin resolved versions/hashes, record SQLite runtime and host architecture, verify in a clean environment, then freeze. Current web documentation versions are not proof of a working combined stack. Unnecessary dependency additions require a named unmet requirement.
+
+The [technical readiness assessment](technical-readiness.md) nominates CPython 3.13 for the first resolver attempt, records remaining metadata gaps and provides a hand-calculated interval/quantile oracle. T12/T22 must include exact whole-window percentiles under the consumer's separate memory budget as well as writer workloads. G0 is still pending, not passed by documentary compatibility checks.
+
+## 4. Measurement record
+
+For each real-scale run record: original bytes/rows, source revisions, phases, wall/CPU time, peak whole-process RSS, DuckDB settings, peak database/WAL/spill/candidate/retained disk usage, input method, SQL/lock hashes and failure reason. Separate warm from cold runs. Do not benchmark unrelated toy data and advertise it as monthly performance. Query latency and total execution time are reported measurements; no SLA exists yet.
+
+The main feasibility risk is retained native database copies plus complete quality/quantile calculations for roughly a year of monthly data. Pilot one complete month first, estimate conservative peak requirements, then run the target window only if the budget preflight permits it. Never silently substitute a small sample as the finished flagship.
+
+## 5. Handoff and review status
+
+Current deliverables are the three linked design documents and Architecture v1. No package lock, migration, schema DDL, pipeline code, automated test, container, or dashboard has been created. Implementation starts only as a distinct next task after this design is reviewable. Open technical acceptance items are environment compatibility, source-schema validation across the selected window, scale feasibility, and filesystem durability; source request/on-scene semantics retain their documented uncertainty.

@@ -1,0 +1,27 @@
+"""One-off source investigation; no pipeline or production model."""
+from pathlib import Path
+import json, hashlib, datetime, collections
+prefix=Path('<ORIGINAL_WORKSPACE>/private/runs/2026-11-08-tlc-feasibility/inspection_worksheet.py').read_text().split('def inspect(spec):')[0]
+exec(prefix)
+OUT=Path('<ORIGINAL_WORKSPACE>/private/runs/2026-11-09-hvfhv-architecture')
+for month in ['2024-12','2025-01','2026-09']:
+    url=f'https://d37ci6vzurychx.cloudfront.net/trip-data/fhvhv_tripdata_{month}.parquet'
+    f=HTTPFile(url);p=pq.ParquetFile(f)
+    nulls={}
+    for ci,name in enumerate(p.schema_arrow.names):
+        stats=[p.metadata.row_group(ri).column(ci).statistics for ri in range(p.metadata.num_row_groups)]
+        nulls[name]=sum(s.null_count for s in stats) if all(s is not None and s.has_null_count for s in stats) else None
+    result={'url':url,'captured_at':datetime.datetime.now(datetime.timezone.utc).isoformat(),'etag':f.etag,'bytes':f.size,'rows':p.metadata.num_rows,'footer_reported_nulls_all_row_groups':nulls,'caveat':'Null totals trust Parquet writer metadata; no full data scan or independent verification. Samples are non-random and cannot estimate monthly prevalence.'}
+    path=OUT/f'{month}-extended.json';path.write_text(json.dumps(result,indent=2));print(month,'metadata',json.dumps(nulls),flush=True)
+    if month=='2026-09':
+        result['samples']=[]
+        for rg in [p.metadata.num_row_groups//2,p.metadata.num_row_groups-1]:
+            cols=['hvfhs_license_num','request_datetime','pickup_datetime','dropoff_datetime','trip_time','on_scene_datetime','wav_request_flag','wav_match_flag']
+            b=next(p.iter_batches(batch_size=20000,row_groups=[rg],columns=cols,use_threads=False));rows=b.to_pylist()
+            qs=[r for r in rows if r['request_datetime'] is not None and r['pickup_datetime'] is not None]
+            diffs=sorted((r['pickup_datetime']-r['request_datetime']).total_seconds() for r in qs)
+            dur=[r for r in rows if r['pickup_datetime'] is not None and r['dropoff_datetime'] is not None and r['trip_time'] is not None]
+            counts={'negative_request_to_pickup':sum(x<0 for x in diffs),'zero_request_to_pickup':sum(x==0 for x in diffs),'request_to_pickup_over_3600_seconds':sum(x>3600 for x in diffs),'trip_time_differs_from_stored_timestamp_difference':sum((r['dropoff_datetime']-r['pickup_datetime']).total_seconds()!=r['trip_time'] for r in dur)}
+            result['samples'].append({'row_group_index':rg,'sample_rows':len(rows),'method':'first up to20k rows of selected physical row group, not random; stored timestamps without timezone conversion','eligible_request_pairs':len(qs),'eligible_trip_time_comparisons':len(dur),'license_counts':dict(collections.Counter(r['hvfhs_license_num'] for r in rows)),'pickup_min':str(min(r['pickup_datetime'] for r in rows)),'pickup_max':str(max(r['pickup_datetime'] for r in rows)),'nulls':{c:sum(r[c] is None for r in rows) for c in cols},'flags':counts,'request_interval_seconds_descriptive':{'min':diffs[0],'median':diffs[len(diffs)//2],'p95_nearest_rank':diffs[__import__('math').ceil(.95*len(diffs))-1],'max':diffs[-1]}})
+            path.write_text(json.dumps(result,indent=2));print(month,'sample',json.dumps(result['samples'][-1]),flush=True)
+    result['bytes_fetched']=f.read_bytes;path.write_text(json.dumps(result,indent=2));path.chmod(0o600)

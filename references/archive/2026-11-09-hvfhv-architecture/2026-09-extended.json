@@ -1,0 +1,108 @@
+{
+  "url": "https://d37ci6vzurychx.cloudfront.net/trip-data/fhvhv_tripdata_2026-09.parquet",
+  "captured_at": "2026-11-09T06:29:56.413338+00:00",
+  "etag": "\"0b4c0ff7103e7667b6503d9a983795e0-30\"",
+  "bytes": 509720685,
+  "rows": 20987681,
+  "footer_reported_nulls_all_row_groups": {
+    "hvfhs_license_num": 0,
+    "dispatching_base_num": 0,
+    "originating_base_num": 5550108,
+    "request_datetime": 0,
+    "on_scene_datetime": 2,
+    "pickup_datetime": 0,
+    "dropoff_datetime": 0,
+    "PULocationID": 0,
+    "DOLocationID": 0,
+    "trip_miles": 0,
+    "trip_time": 0,
+    "base_passenger_fare": 0,
+    "tolls": 0,
+    "bcf": 0,
+    "sales_tax": 0,
+    "congestion_surcharge": 0,
+    "airport_fee": 0,
+    "tips": 0,
+    "driver_pay": 0,
+    "shared_request_flag": 0,
+    "shared_match_flag": 0,
+    "access_a_ride_flag": 0,
+    "wav_request_flag": 0,
+    "wav_match_flag": 0,
+    "cbd_congestion_fee": 0
+  },
+  "caveat": "Null totals trust Parquet writer metadata; no full data scan or independent verification. Samples are non-random and cannot estimate monthly prevalence.",
+  "samples": [
+    {
+      "row_group_index": 10,
+      "sample_rows": 20000,
+      "method": "first up to20k rows of selected physical row group, not random; stored timestamps without timezone conversion",
+      "eligible_request_pairs": 20000,
+      "eligible_trip_time_comparisons": 20000,
+      "license_counts": {
+        "HV0003": 13982,
+        "HV0005": 6018
+      },
+      "pickup_min": "2026-09-16 08:00:00",
+      "pickup_max": "2026-09-16 08:59:59",
+      "nulls": {
+        "hvfhs_license_num": 0,
+        "request_datetime": 0,
+        "pickup_datetime": 0,
+        "dropoff_datetime": 0,
+        "trip_time": 0,
+        "on_scene_datetime": 0,
+        "wav_request_flag": 0,
+        "wav_match_flag": 0
+      },
+      "flags": {
+        "negative_request_to_pickup": 501,
+        "zero_request_to_pickup": 0,
+        "request_to_pickup_over_3600_seconds": 1,
+        "trip_time_differs_from_stored_timestamp_difference": 4673
+      },
+      "request_interval_seconds_descriptive": {
+        "min": -1840.0,
+        "median": 314.0,
+        "p95_nearest_rank": 885.0,
+        "max": 3809.0
+      }
+    },
+    {
+      "row_group_index": 20,
+      "sample_rows": 16161,
+      "method": "first up to20k rows of selected physical row group, not random; stored timestamps without timezone conversion",
+      "eligible_request_pairs": 16161,
+      "eligible_trip_time_comparisons": 16161,
+      "license_counts": {
+        "HV0003": 12182,
+        "HV0005": 3979
+      },
+      "pickup_min": "2026-09-30 23:00:00",
+      "pickup_max": "2026-09-30 23:59:58",
+      "nulls": {
+        "hvfhs_license_num": 0,
+        "request_datetime": 0,
+        "pickup_datetime": 0,
+        "dropoff_datetime": 0,
+        "trip_time": 0,
+        "on_scene_datetime": 0,
+        "wav_request_flag": 0,
+        "wav_match_flag": 0
+      },
+      "flags": {
+        "negative_request_to_pickup": 74,
+        "zero_request_to_pickup": 1,
+        "request_to_pickup_over_3600_seconds": 0,
+        "trip_time_differs_from_stored_timestamp_difference": 3811
+      },
+      "request_interval_seconds_descriptive": {
+        "min": -1789.0,
+        "median": 299.0,
+        "p95_nearest_rank": 851.0,
+        "max": 2956.0
+      }
+    }
+  ],
+  "bytes_fetched": 13269266
+}

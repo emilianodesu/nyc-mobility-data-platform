@@ -1,0 +1,107 @@
+# HVFHV: architecture research and challenge review
+
+Date: 2026-11-09, America/Mexico_City. Status: research recommendation, not an approved design or implementation plan. The user selected HVFHV and monthly batch arrival; the consumer is deliberately fictional. The goal is demonstrable pipeline robustness, profiling and quality, with a simple request-to-pickup analytical output. No business adoption, verified user skill or production readiness is implied.
+
+## Evidence expanded in this review
+
+Previous observations: roughly 20–21 million rows and 491–510 MB compressed per HVFHV monthly object across December 2024, January 2025 and September 2026. The new inspection read null-count metadata for every row group in those three objects. These are writer-reported statistics, not independently verified full-column scans. September was additionally sampled in physical row groups 10 and 20, yielding 20,000 and 16,161 rows. Samples remain non-random and time-local. Adjacent JSON files contain source URLs, ETags, capture times, counts and methods.
+
+| Object month | Footer-reported null on_scene_datetime | Full-file row count |
+| --- | ---: | ---: |
+| 2024-12 | 5,121,638 | 21,068,851 |
+| 2025-01 | 5,035,135 | 20,405,666 |
+| 2026-09 | 2 | 20,987,681 |
+
+This is a coverage change requiring investigation, not proof that data quality improved or that the official definition changed. The inspected [official dictionary](https://www.nyc.gov/assets/tlc/downloads/pdf/data_dictionary_trip_records_hvfhs.pdf) limits on-scene to accessible vehicles. We cannot resolve this tension from presence alone. The new metadata reports no null request/pickup/dropoff values in these objects; non-null does not establish correct values.
+
+The September 16 08:00–08:59:59 sample contains 501 negative request-to-pickup differences among 20,000 eligible pairs. In the September 30 23:00–23:59:58 sample, 74 of 16,161 pairs are negative. Reported trip_time differs from simple stored dropoff-minus-pickup in 4,673 and 3,811 rows respectively. Difference magnitudes, causes and allowable tolerances were not established. Comparisons use stored timezone-naive timestamps, not proven UTC durations. The samples do not estimate monthly error rates or prove causal explanations.
+
+The workstation has 24 GiB RAM, 10 reported CPUs and approximately 305 GiB free disk at inspection time. These are resource observations, not benchmarks or a guarantee that every query fits. Twelve files at 0.5 GB each would be about 6 GB of raw compressed input, an illustration rather than measured annual size. Derivatives, retained revisions, temporary spill files and catalogs increase storage.
+
+## Decisions to challenge before choosing tools
+
+1. **Monthly batch is not event streaming.** Source publication, trip event time and capture time differ. A Kafka layer would not make the source more current. No CDC feed or ordered update log has been established.
+2. **There is no published business trip key.** File identity, load identity and real trip identity are distinct. A hash can identify equal contents but cannot decide whether equal rows are duplicate business events. Re-running an acquisition must not duplicate its contribution; this does not justify deleting identical source records.
+3. **Avoid a default row-level MERGE.** The publication unit is a monthly object. Replacing the contribution of a source-object revision is a better hypothesis than inventing a primary key. This remains conditional: replacement and overlap semantics need explicit agreement, and we have not observed all historical source revisions.
+4. **Processing partitions and analytical partitions differ.** A source month is useful for acquisition/recovery. Pickup dates drive queries. Event-date outliers must not silently move provenance or disappear. Partitioning every zone/day/license combination before observing query patterns risks small files and needless metadata.
+5. **Layers are responsibilities, not a mandatory number of copies.** Preserve the exact original, make semantic decisions explicit, and serve a controlled result. Three physical layers, a star schema and a lakehouse are optional choices. Zone references and a fact-like trip relation may suffice; fabricated customer/driver dimensions would be unsupported.
+6. **Profiling and quality assertions are different outputs.** Profiles measure distributions, coverage and relationships. Assertions encode a chosen expectation. Source contracts are expectations we maintain, not obligations we control at TLC.
+7. **Quality is not one destructive filter.** A non-readable download is a technical failure; a negative interval is a semantic exception; an unfamiliar distribution is an investigation trigger. A trip may remain useful for activity counts while being ineligible for a particular interval metric. Preserve reason codes and denominators rather than discarding every flagged row.
+8. **Simple analytics still requires correct statistics.** A monthly p95 is not the mean of daily p95 values. Exact versus approximate quantiles, eligible records and treatment of negatives are methodology choices. No threshold or latency objective has been fabricated here.
+9. **A successful task is not a consistent publication.** Trips, quality profiles and aggregate output must refer to the same evidence/release. Table-level ACID alone does not establish a multi-table or dashboard-wide atomic release.
+10. **Technical correctness does not establish domain truth.** The dictionary and observed coverage leave open questions about on-scene and scheduled requests. Preserve source timestamps while investigating timezone/DST semantics; do not force UTC or rename the derived interval as verified customer waiting time.
+
+## Architecture alternatives
+
+Compute engine, publication/storage semantics and orchestration are separate decisions. The table below describes candidates, not installed components.
+
+| Candidate | Shape | Why it fits | Main challenge | Evidence that would favor it |
+| --- | --- | --- | --- | --- |
+| A: local analytical database | Immutable originals; SQL in embedded DuckDB; controlled publication of an analytical result | Low operational burden; supports a full monthly lifecycle | Writer ownership, release consistency, native database version retention | Representative workloads meet resource goals and release behavior stays simple |
+| B: local compute with open transactional tables | Immutable originals; local SQL/Arrow processing; Iceberg or Delta-managed tables; compatible catalog/log | Makes snapshots, schema evolution and recovery first-class without assuming distributed compute | Engine/format feature compatibility, catalog backup, retention and extra moving parts | Snapshot/rollback/evolution objectives justify format operations more than custom publication logic |
+| C: distributed compute with open tables | Spark with Iceberg or Delta and orchestration | Supports explicit distributed-processing objectives | Operating executors, memory/shuffle diagnostics and a reproducible distributed environment | A measured single-node limit, or explicit user-selected distributed-systems learning objective |
+
+**Provisional judgment:** A and B should remain the serious finalists. A is the provisional default and simplicity baseline: it is a transactional database, not merely a loose Parquet folder, so robustness alone does not require B. B is attractive for this user's robustness-first goal because rebuilding transactional table behavior ourselves can be more complex than using an existing format. This is not a conclusion that B is needed merely because it looks more advanced. C is not justified by the observed row count alone. Spark in local mode can teach execution internals, but is not evidence of multi-node fault tolerance [S4].
+
+### Compute: DuckDB and alternatives
+
+DuckDB supports Parquet projection/filter pushdown and larger-than-memory processing, with documented limits [S1–S2]. That supports a local candidate, not a performance claim. The embedded mode has a single writer process; concurrent orchestrator processes cannot blindly share a writable database. Current docs also describe other modes, so the restriction must be stated for the selected deployment rather than all DuckDB [S3]. A server database such as PostgreSQL could become useful for concurrent serving or metadata, but loading all source trips into it is not automatically needed. Polars is another possible local transformation engine; it was not comparatively evaluated in this review, so it is neither rejected nor silently added.
+
+### Transactional format: genuine value and obligations
+
+Iceberg uses snapshots and atomic table metadata commits; it supports schema and partition evolution [S5–S6]. PyIceberg exposes reads/writes and SQL/REST catalogs, demonstrating that Spark is not a prerequisite [S8–S9]. No exact mixed-engine configuration was exercised. A DuckDB scan integration is not proof of unrestricted Iceberg write support. Operations must be checked against concrete versions and assigned a writer.
+
+Delta provides optimistic-concurrency and snapshot semantics on supported storage [S10]. It remains a credible alternative, especially if Spark/Delta learning becomes intentional. No compatibility or maintenance benchmark established a winner. With either format, retention, orphan cleanup and catalog/log durability must be designed; history cannot be promised indefinitely [S7]. Avoid implementing a home-grown table transaction protocol just to reduce a dependency count. Conversely, do not add an object-store server, catalog service and multiple query engines without a responsibility for each.
+
+### Orchestration: provisional preference for Dagster OSS
+
+Dagster's asset/partition model fits source months, profiling outputs and publication status [S11]. Airflow offers explicit backfill and concurrency controls [S13] and remains reasonable. The preference for Dagster is conceptual fit, not an unverified claim about popularity or lower RAM use. Neither guarantees idempotent transformations.
+
+Two version-specific cautions from Dagster docs: failed asset checks do not block downstream materialization by default; partitioned asset checks are currently marked preview [S12]. Do not make an essential correctness guarantee depend on UI status or assumed preview behavior. Separate OSS features from paid Dagster+ features. Both tools require a running execution environment; a sleeping laptop does not maintain an always-on schedule. Automatic catch-up on resumption and continuous hosted operation are different commitments.
+
+### dbt, validation libraries and presentation
+
+dbt's SQL model graph, documentation and data assertions may help if there are enough models to justify it [S14]. It is not required to call the pipeline end to end and does not replace profiling, ingestion or recovery exercises. Current DuckDB setup docs distinguish adapter/driver behavior across dbt generations [S15]; an unpinned 'latest + latest' stack is not a researched compatibility decision.
+
+Choose one owner for each assertion rather than duplicating it across dbt, Great Expectations and Dagster. A separate validation library only earns a place if its capabilities meet an explicit need. A queryable result plus a modest presentation of interval metrics and quality is a complete consumer boundary; a custom REST service, ML model and feature store are not required. No UI tool was selected or evaluated here.
+
+## Candidate high-level flow
+
+This is a responsibility model, not a deployment diagram:
+
+`Published monthly object -> verified acquisition + immutable evidence -> profile + semantic qualification -> versioned analytical result -> controlled release -> simple consumer`
+
+Across that flow: provenance, quality evidence, orchestration, resource reporting and recovery. Quality is observed during acquisition, transformation and consumption, not only at a single middle gate. The profiling output is itself a first-class deliverable for the fictional reviewer/consumer.
+
+## Decision status and evidence still needed
+
+- Settled by the user: HVFHV; real monthly arrival; free-resource constraint; engineering demonstration; fictional consumer; request-to-pickup interest.
+- Proposed: batch architecture, explicit source-object provenance, no invented trip key, controlled publication, local compute as baseline, Dagster OSS as orchestration finalist.
+- Open: native analytical database versus transactional open tables; Iceberg versus Delta if selected; role of dbt; retention budget; source timezone/temporal semantics; exact versions and operation support.
+- Not justified now: Kafka, Kubernetes, multi-node Spark, Data Mesh claims, multiple validation frameworks or mandatory ML. Spark may still be deliberately chosen for a stated learning objective rather than falsely attributed to source necessity.
+- Before locking a stack, its candidate must show supported read/write/evolution/rollback operations, bounded resource behavior on representative queries, and an explicit release-consistency model. Those would be later, user-reviewed feasibility checks, not work executed in this research.
+
+No codebase, containers, cluster, workflow, data table or deployment was created. Only a one-off read-only data-inspection worksheet and research artifacts were written. No pipeline tests or performance benchmarks ran. A separate agent challenged the architectural alternatives using primary documentation; it did not independently reproduce the observations.
+
+## Primary-source ledger
+
+All accessed 2026-11-09; documentation behavior is evidence of advertised capabilities, not proof of interoperability in this environment. Stable/latest links can change. No technical inference below is based on tutorial search snippets.
+
+- S1 [DuckDB Parquet](https://duckdb.org/docs/2.0/data/parquet/overview): columnar I/O features.
+- S2 [DuckDB workload tuning](https://duckdb.org/docs/2.0/guides/performance/how_to_tune_workloads): out-of-core capability and limits.
+- S3 [DuckDB concurrency](https://duckdb.org/docs/2.0/connect/concurrency): embedded versus other deployment modes.
+- S4 [Spark cluster architecture](https://spark.apache.org/docs/latest/cluster-overview.html): driver/executor distinction.
+- S5 [Iceberg reliability](https://iceberg.apache.org/docs/latest/reliability/): snapshot and commit model.
+- S6 [Iceberg evolution](https://iceberg.apache.org/docs/latest/evolution/): schema and partition evolution.
+- S7 [Iceberg maintenance](https://iceberg.apache.org/docs/latest/maintenance/): retained snapshots and cleanup obligations.
+- S8 [PyIceberg API](https://py.iceberg.apache.org/api/): local client operations and integrations.
+- S9 [PyIceberg configuration](https://py.iceberg.apache.org/configuration/): catalogs and I/O options.
+- S10 [Delta concurrency](https://docs.delta.io/concurrency-control/): supported-storage transaction guarantees.
+- S11 [Dagster partitions](https://dagster.io/docs/guides/build/partitions-and-backfills/partitioning-assets): partition model.
+- S12 [Dagster checks](https://dagster.io/docs/guides/test/asset-checks): default blocking behavior and preview notice.
+- S13 [Airflow backfill](https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/backfill.html): rerun and concurrency controls.
+- S14 [dbt data tests](https://docs.getdbt.com/docs/build/data-tests): assertions versus descriptive profiling.
+- S15 [dbt DuckDB setup](https://docs.getdbt.com/docs/local/connect-data-platform/duckdb-setup): version/driver configuration differences.
+- S16 [HVFHV official dictionary](https://www.nyc.gov/assets/tlc/downloads/pdf/data_dictionary_trip_records_hvfhs.pdf): field definitions. Additional primary-source searches did not resolve the observed temporal discrepancies or on-scene coverage shift. NYC Open Data HTML pages yielded no readable schema in this session, so their search snippets were not promoted to verification.
+
+Earlier TLC research supplies source inventory and educational baseline coverage. This follow-up focuses on official capability documentation and original Parquet evidence; no additional YouTube videos were watched or third-party project code executed.

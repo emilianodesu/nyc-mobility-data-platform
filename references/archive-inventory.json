@@ -1,0 +1,282 @@
+{
+  "format_version": 1,
+  "entries": [
+    {
+      "origin": "2026-11-08-flagship-research/ASSESSMENT.md",
+      "export": "references/archive/2026-11-08-flagship-research/ASSESSMENT.md.txt",
+      "original_sha256": "91bda7b42545e1a1f0508fa12d4790bd2322cee5336dbb1e01415193aa4c4f2a",
+      "transformations": [
+        "portable path redaction when present",
+        "Markdown/inspection code archived as inert text when applicable"
+      ]
+    },
+    {
+      "origin": "2026-11-08-flagship-research/olist-inspection.json",
+      "export": "references/archive/2026-11-08-flagship-research/olist-inspection.json",
+      "original_sha256": "46d05ed321deabf22230c6ba1197150a9f06380457bf4c0d10da3d62f579c653",
+      "transformations": [
+        "portable path redaction when present",
+        "Markdown/inspection code archived as inert text when applicable"
+      ]
+    },
+    {
+      "origin": "2026-11-08-flagship-research/research-record.json",
+      "export": "references/archive/2026-11-08-flagship-research/research-record.json",
+      "original_sha256": "776be9feef5d3a0a42d26dceb6f90b4679a3550515ff84d206053508fe0fdfc7",
+      "transformations": [
+        "portable path redaction when present",
+        "Markdown/inspection code archived as inert text when applicable"
+      ]
+    },
+    {
+      "origin": "2026-11-08-tlc-feasibility/FINDINGS.md",
+      "export": "references/archive/2026-11-08-tlc-feasibility/FINDINGS.md.txt",
+      "original_sha256": "981778a8599745533a2c88a6bc1df23bde80b8d4695920545d3c148500b1ab48",
+      "transformations": [
+        "portable path redaction when present",
+        "Markdown/inspection code archived as inert text when applicable"
+      ]
+    },
+    {
+      "origin": "2026-11-08-tlc-feasibility/fhvhv_tripdata_2024-12.parquet.inspection.json",
+      "export": "references/archive/2026-11-08-tlc-feasibility/fhvhv_tripdata_2024-12.parquet.inspection.json",
+      "original_sha256": "4619fa663847332ef4d6110ac527001b9e0a625bce2eb90c952fc2661e4a14ab",
+      "transformations": [
+        "portable path redaction when present",
+        "Markdown/inspection code archived as inert text when applicable"
+      ]
+    },
+    {
+      "origin": "2026-11-08-tlc-feasibility/fhvhv_tripdata_2025-01.parquet.inspection.json",
+      "export": "references/archive/2026-11-08-tlc-feasibility/fhvhv_tripdata_2025-01.parquet.inspection.json",
+      "original_sha256": "d1cfd6922cd5c94ddadf660fc1741702f30abc057b4f653e218d7e13ef254fe2",
+      "transformations": [
+        "portable path redaction when present",
+        "Markdown/inspection code archived as inert text when applicable"
+      ]
+    },
+    {
+      "origin": "2026-11-08-tlc-feasibility/fhvhv_tripdata_2026-09.parquet.inspection.json",
+      "export": "references/archive/2026-11-08-tlc-feasibility/fhvhv_tripdata_2026-09.parquet.inspection.json",
+      "original_sha256": "0539001647d6acca1a037bf092378cff826d54105955ee41dd757945d0c3712b",
+      "transformations": [
+        "portable path redaction when present",
+        "Markdown/inspection code archived as inert text when applicable"
+      ]
+    },
+    {
+      "origin": "2026-11-08-tlc-feasibility/inspection_worksheet.py",
+      "export": "references/archive/2026-11-08-tlc-feasibility/inspection_worksheet.py.txt",
+      "original_sha256": "1ecf082625184660f701c069f67f858421fd25a9397ee4ae414be05e2b5bb1b8",
+      "transformations": [
+        "portable path redaction when present",
+        "Markdown/inspection code archived as inert text when applicable"
+      ]
+    },
+    {
+      "origin": "2026-11-08-tlc-feasibility/research-record.json",
+      "export": "references/archive/2026-11-08-tlc-feasibility/research-record.json",
+      "original_sha256": "bcd7799d74ba18b8b28f1a8fbbbd74d86b49e5004abebb0bfdec71be3d2b8d22",
+      "transformations": [
+        "portable path redaction when present",
+        "Markdown/inspection code archived as inert text when applicable"
+      ]
+    },
+    {
+      "origin": "2026-11-08-tlc-feasibility/taxi_zone_lookup.csv",
+      "export": "references/archive/2026-11-08-tlc-feasibility/taxi_zone_lookup.csv",
+      "original_sha256": "1a99e105092230f8620f301edcca7f80d3080642ff404d28ed957d3fa222c8ed",
+      "transformations": [
+        "portable path redaction when present",
+        "Markdown/inspection code archived as inert text when applicable"
+      ]
+    },
+    {
+      "origin": "2026-11-08-tlc-feasibility/yellow_tripdata_2024-12.parquet.inspection.json",
+      "export": "references/archive/2026-11-08-tlc-feasibility/yellow_tripdata_2024-12.parquet.inspection.json",
+      "original_sha256": "5ec01e716a9f51db248d08d8991d4f5b6ae72237423b3d4b6c88fc7ae1d80f65",
+      "transformations": [
+        "portable path redaction when present",
+        "Markdown/inspection code archived as inert text when applicable"
+      ]
+    },
+    {
+      "origin": "2026-11-08-tlc-feasibility/yellow_tripdata_2025-01.parquet.inspection.json",
+      "export": "references/archive/2026-11-08-tlc-feasibility/yellow_tripdata_2025-01.parquet.inspection.json",
+      "original_sha256": "e5b54dd2a75130028e91430e0d70ac341565f4dc280e81e5f36311a9a5468263",
+      "transformations": [
+        "portable path redaction when present",
+        "Markdown/inspection code archived as inert text when applicable"
+      ]
+    },
+    {
+      "origin": "2026-11-08-tlc-feasibility/yellow_tripdata_2026-09.parquet.inspection.json",
+      "export": "references/archive/2026-11-08-tlc-feasibility/yellow_tripdata_2026-09.parquet.inspection.json",
+      "original_sha256": "8b56aefa49c7c1cbcb224558b255201d97b158f98328bbfbf12f01292d97fe66",
+      "transformations": [
+        "portable path redaction when present",
+        "Markdown/inspection code archived as inert text when applicable"
+      ]
+    },
+    {
+      "origin": "2026-11-08-tlc-feasibility/zone-inspection.json",
+      "export": "references/archive/2026-11-08-tlc-feasibility/zone-inspection.json",
+      "original_sha256": "57ed2e11974a97b6e6ca18219ce707c36569e650787f92976f3ae447986cc7ff",
+      "transformations": [
+        "portable path redaction when present",
+        "Markdown/inspection code archived as inert text when applicable"
+      ]
+    },
+    {
+      "origin": "2026-11-09-hvfhv-architecture/2024-12-extended.json",
+      "export": "references/archive/2026-11-09-hvfhv-architecture/2024-12-extended.json",
+      "original_sha256": "5e3556e24a1999748d96c562807c0f0f7d63f10987ed159d095c4ccff10ca23b",
+      "transformations": [
+        "portable path redaction when present",
+        "Markdown/inspection code archived as inert text when applicable"
+      ]
+    },
+    {
+      "origin": "2026-11-09-hvfhv-architecture/2025-01-extended.json",
+      "export": "references/archive/2026-11-09-hvfhv-architecture/2025-01-extended.json",
+      "original_sha256": "ed7f16f106d10e0fd69ecd6a99090472aa85d7a12390fdade8bdbef0053420fc",
+      "transformations": [
+        "portable path redaction when present",
+        "Markdown/inspection code archived as inert text when applicable"
+      ]
+    },
+    {
+      "origin": "2026-11-09-hvfhv-architecture/2026-09-extended.json",
+      "export": "references/archive/2026-11-09-hvfhv-architecture/2026-09-extended.json",
+      "original_sha256": "67c483e7ba650eb8c49b067e2f37e2f9b4c06e1becf1777cc08528fcb9f3e2fb",
+      "transformations": [
+        "portable path redaction when present",
+        "Markdown/inspection code archived as inert text when applicable"
+      ]
+    },
+    {
+      "origin": "2026-11-09-hvfhv-architecture/ARCHITECTURE-REVIEW.md",
+      "export": "references/archive/2026-11-09-hvfhv-architecture/ARCHITECTURE-REVIEW.md.txt",
+      "original_sha256": "b4d2d3afa8069dc44b63089a8ebfc40683290e8dc90a22197be6b37688d75209",
+      "transformations": [
+        "portable path redaction when present",
+        "Markdown/inspection code archived as inert text when applicable"
+      ]
+    },
+    {
+      "origin": "2026-11-09-hvfhv-architecture/inspection_worksheet.py",
+      "export": "references/archive/2026-11-09-hvfhv-architecture/inspection_worksheet.py.txt",
+      "original_sha256": "cf9e2446be46157aecdc81389da10566ae209538b8792a0ca6d961ff359c6698",
+      "transformations": [
+        "portable path redaction when present",
+        "Markdown/inspection code archived as inert text when applicable"
+      ]
+    },
+    {
+      "origin": "2026-11-09-hvfhv-architecture/prior_inspection_reference.py",
+      "export": "references/archive/2026-11-09-hvfhv-architecture/prior_inspection_reference.py.txt",
+      "original_sha256": "1ecf082625184660f701c069f67f858421fd25a9397ee4ae414be05e2b5bb1b8",
+      "transformations": [
+        "portable path redaction when present",
+        "Markdown/inspection code archived as inert text when applicable"
+      ]
+    },
+    {
+      "origin": "2026-11-09-hvfhv-architecture/research-record.json",
+      "export": "references/archive/2026-11-09-hvfhv-architecture/research-record.json",
+      "original_sha256": "0a245f64bcc05edc026e6afacb1242d19f1c0fb76a32147c1506c04c21bbebda",
+      "transformations": [
+        "portable path redaction when present",
+        "Markdown/inspection code archived as inert text when applicable"
+      ]
+    },
+    {
+      "origin": "design-history/ARCHITECTURE-v1.md",
+      "export": "references/archive/design-history/ARCHITECTURE-v1.md.txt",
+      "original_sha256": "62b758ecc30f893e2760e212b3b930d0fc6b5d30dd34ccf9fbb9f6f9f102750b",
+      "transformations": [
+        "archived as historical text, not current instructions"
+      ]
+    },
+    {
+      "origin": "design-history/DATA-CONTRACTS-v1.md",
+      "export": "references/archive/design-history/DATA-CONTRACTS-v1.md.txt",
+      "original_sha256": "5f0209fc44d2f2c16c482211475dfaae1e307740c28f048aadd2f6736d0d1b01",
+      "transformations": [
+        "archived as historical text, not current instructions"
+      ]
+    },
+    {
+      "origin": "design-history/DESIGN-VERIFICATION-v1.md",
+      "export": "references/archive/design-history/DESIGN-VERIFICATION-v1.md.txt",
+      "original_sha256": "787347183cba6f51ef55cc80eefc2e4ef8c5c8d565f7f97fbbcf9e801edf73f6",
+      "transformations": [
+        "archived as historical text, not current instructions"
+      ]
+    },
+    {
+      "origin": "design-history/LOW-LEVEL-DESIGN-v1.md",
+      "export": "references/archive/design-history/LOW-LEVEL-DESIGN-v1.md.txt",
+      "original_sha256": "b3fcca0d6b9ede70a10119427f41c3328de10697b322423d91c9162a8553ae93",
+      "transformations": [
+        "archived as historical text, not current instructions"
+      ]
+    },
+    {
+      "origin": "design-history/OPERATIONS-DESIGN-v1.md",
+      "export": "references/archive/design-history/OPERATIONS-DESIGN-v1.md.txt",
+      "original_sha256": "d5e367cd36334a961c7396c6fce64b8399afd4a2187cb71a632cb51e27ed010e",
+      "transformations": [
+        "archived as historical text, not current instructions"
+      ]
+    },
+    {
+      "origin": "design-history/README.md",
+      "export": "references/archive/design-history/README.md.txt",
+      "original_sha256": "e98078748b6834826d12b30476d6243de4389c09471fcb5f5a94509831e1f0cf",
+      "transformations": [
+        "archived as historical text, not current instructions"
+      ]
+    },
+    {
+      "origin": "design-history/REPOSITORY-HANDOFF-v1.md",
+      "export": "references/archive/design-history/REPOSITORY-HANDOFF-v1.md.txt",
+      "original_sha256": "c0415ed4286dd41732c98b9b036e224f7ef74efced1192d2ab1ead8b65f5a02c",
+      "transformations": [
+        "archived as historical text, not current instructions"
+      ]
+    },
+    {
+      "origin": "design-history/REQUIREMENTS-v1.md",
+      "export": "references/archive/design-history/REQUIREMENTS-v1.md.txt",
+      "original_sha256": "50e0ad3dc93539e808b373a9259280b19ca280c1facceab2a68d741f84ffbcb0",
+      "transformations": [
+        "archived as historical text, not current instructions"
+      ]
+    },
+    {
+      "origin": "design-history/TECHNICAL-READINESS-v1.md",
+      "export": "references/archive/design-history/TECHNICAL-READINESS-v1.md.txt",
+      "original_sha256": "0679bc8a50c10718ba60993ce197312a55fcc9d022b9d7b275e6593ca6ac0d27",
+      "transformations": [
+        "archived as historical text, not current instructions"
+      ]
+    },
+    {
+      "origin": "design-history/VERIFICATION-PLAN-v1.md",
+      "export": "references/archive/design-history/VERIFICATION-PLAN-v1.md.txt",
+      "original_sha256": "0029430078013f7f4674ab844bf03ea0e6aa65e0d5afaff8891d2c207d252463",
+      "transformations": [
+        "archived as historical text, not current instructions"
+      ]
+    },
+    {
+      "origin": "design-history/WALKTHROUGH-RESULTS-v1.md",
+      "export": "references/archive/design-history/WALKTHROUGH-RESULTS-v1.md.txt",
+      "original_sha256": "d4c74c5c5536b8ff37d30fdb7f62326b0e23efb8b3806d7848dfa3e3ddc2c959",
+      "transformations": [
+        "archived as historical text, not current instructions"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,211 @@
+{
+  "format_version": 1,
+  "date": "2026-11-09",
+  "status": "documentation_ready_for_user_review_runtime_unverified",
+  "repository_initialized": false,
+  "implementation_included": false,
+  "mapped_documents": [
+    {
+      "source_file": "ARCHITECTURE-v1.md",
+      "source_sha256": "62b758ecc30f893e2760e212b3b930d0fc6b5d30dd34ccf9fbb9f6f9f102750b",
+      "output_file": "docs/architecture/overview.md",
+      "transformation": "relative link rewriting; research report links route to curated evidence summary"
+    },
+    {
+      "source_file": "LOW-LEVEL-DESIGN-v1.md",
+      "source_sha256": "b3fcca0d6b9ede70a10119427f41c3328de10697b322423d91c9162a8553ae93",
+      "output_file": "docs/architecture/low-level-design.md",
+      "transformation": "relative link rewriting; research report links route to curated evidence summary"
+    },
+    {
+      "source_file": "DATA-CONTRACTS-v1.md",
+      "source_sha256": "5f0209fc44d2f2c16c482211475dfaae1e307740c28f048aadd2f6736d0d1b01",
+      "output_file": "docs/reference/data-contracts.md",
+      "transformation": "relative link rewriting; research report links route to curated evidence summary"
+    },
+    {
+      "source_file": "OPERATIONS-DESIGN-v1.md",
+      "source_sha256": "d5e367cd36334a961c7396c6fce64b8399afd4a2187cb71a632cb51e27ed010e",
+      "output_file": "docs/reference/interfaces-and-operations.md",
+      "transformation": "relative link rewriting; research report links route to curated evidence summary"
+    },
+    {
+      "source_file": "REQUIREMENTS-v1.md",
+      "source_sha256": "50e0ad3dc93539e808b373a9259280b19ca280c1facceab2a68d741f84ffbcb0",
+      "output_file": "docs/requirements.md",
+      "transformation": "relative link rewriting; research report links route to curated evidence summary"
+    },
+    {
+      "source_file": "VERIFICATION-PLAN-v1.md",
+      "source_sha256": "0029430078013f7f4674ab844bf03ea0e6aa65e0d5afaff8891d2c207d252463",
+      "output_file": "docs/verification/acceptance-plan.md",
+      "transformation": "relative link rewriting; research report links route to curated evidence summary"
+    },
+    {
+      "source_file": "DESIGN-VERIFICATION-v1.md",
+      "source_sha256": "787347183cba6f51ef55cc80eefc2e4ef8c5c8d565f7f97fbbcf9e801edf73f6",
+      "output_file": "docs/verification/design-review.md",
+      "transformation": "relative link rewriting; research report links route to curated evidence summary"
+    },
+    {
+      "source_file": "TECHNICAL-READINESS-v1.md",
+      "source_sha256": "0679bc8a50c10718ba60993ce197312a55fcc9d022b9d7b275e6593ca6ac0d27",
+      "output_file": "docs/verification/technical-readiness.md",
+      "transformation": "relative link rewriting; research report links route to curated evidence summary"
+    },
+    {
+      "source_file": "WALKTHROUGH-RESULTS-v1.md",
+      "source_sha256": "d4c74c5c5536b8ff37d30fdb7f62326b0e23efb8b3806d7848dfa3e3ddc2c959",
+      "output_file": "docs/verification/walkthrough-results.md",
+      "transformation": "relative link rewriting; research report links route to curated evidence summary"
+    },
+    {
+      "source_file": "REPOSITORY-HANDOFF-v1.md",
+      "source_sha256": "c0415ed4286dd41732c98b9b036e224f7ef74efced1192d2ab1ead8b65f5a02c",
+      "output_file": "docs/delivery/repository-handoff.md",
+      "transformation": "relative link rewriting; research report links route to curated evidence summary"
+    }
+  ],
+  "research_records": [
+    {
+      "source_basename": "2024-12-extended.json",
+      "sha256": "5e3556e24a1999748d96c562807c0f0f7d63f10987ed159d095c4ccff10ca23b"
+    },
+    {
+      "source_basename": "2025-01-extended.json",
+      "sha256": "ed7f16f106d10e0fd69ecd6a99090472aa85d7a12390fdade8bdbef0053420fc"
+    },
+    {
+      "source_basename": "2026-09-extended.json",
+      "sha256": "67c483e7ba650eb8c49b067e2f37e2f9b4c06e1becf1777cc08528fcb9f3e2fb"
+    }
+  ],
+  "manifest_self_excluded": true,
+  "files": [
+    {
+      "path": "CONTRIBUTING.md",
+      "bytes": 1373,
+      "sha256": "72a427cb28cb342ae195002a018a382dd8eefbe1d5df4b660ec7ecc9a4d2976f"
+    },
+    {
+      "path": "README.md",
+      "bytes": 2341,
+      "sha256": "560b69cca7816daa52068c8bcb7b1bee113a090e5ba802792384381f3519d649"
+    },
+    {
+      "path": "docs/README.md",
+      "bytes": 1563,
+      "sha256": "dbbf9b785e9e7eb2f548501a10a62144050905c2f9377881538d22b7ce738044"
+    },
+    {
+      "path": "docs/architecture/decisions/0001-monthly-source-and-semantic-boundary.md",
+      "bytes": 1249,
+      "sha256": "313184a5de75d044153c830068f9699a0d7b57a3da947902dd5401c00a852cc2"
+    },
+    {
+      "path": "docs/architecture/decisions/0002-local-native-analytical-storage.md",
+      "bytes": 1281,
+      "sha256": "52cfde1048c5bb6912f0b9bafd6740a383e947cc030d436aaecdadb9c991f4f4"
+    },
+    {
+      "path": "docs/architecture/decisions/0003-immutable-releases-and-selection.md",
+      "bytes": 1228,
+      "sha256": "74a88b955dcb6f4bf8e73213b552cfcb95a796ece6bec0382dd5cd69efb7174b"
+    },
+    {
+      "path": "docs/architecture/decisions/0004-quality-and-recorded-intervals.md",
+      "bytes": 1289,
+      "sha256": "a513d2e69b6188069c00814c9d70185ddfe269edf2d434bc51485fa3760d980b"
+    },
+    {
+      "path": "docs/architecture/decisions/0005-orchestration-and-consumer.md",
+      "bytes": 1206,
+      "sha256": "bacf2a5c6c38dc22aed40760809b6262a54456073df307cdee98d7839a56078b"
+    },
+    {
+      "path": "docs/architecture/decisions/README.md",
+      "bytes": 760,
+      "sha256": "ade4e3fac618801c8c5bf410be563327889640fac483f98243e27b9c8e2bde18"
+    },
+    {
+      "path": "docs/architecture/diagrams.md",
+      "bytes": 3205,
+      "sha256": "93babc1ed1dbcf5a1a739bfcb7c4aea66e6818981d86602691cb2b7881a9a873"
+    },
+    {
+      "path": "docs/architecture/low-level-design.md",
+      "bytes": 25541,
+      "sha256": "fe0a960cafb155b483192b57f501ea5cf7553928b562e57bc872aa47babba72b"
+    },
+    {
+      "path": "docs/architecture/overview.md",
+      "bytes": 17118,
+      "sha256": "eecbcee05a6c39e29223f5cea55cda43b0eafefb26bf263458b5964eeeabace5"
+    },
+    {
+      "path": "docs/delivery/implementation-sequence.md",
+      "bytes": 2109,
+      "sha256": "73e1406b4ff0a70ece3ac63910c0196a743e7e6de03273357fb943b24306b998"
+    },
+    {
+      "path": "docs/delivery/repository-handoff.md",
+      "bytes": 4843,
+      "sha256": "c0415ed4286dd41732c98b9b036e224f7ef74efced1192d2ab1ead8b65f5a02c"
+    },
+    {
+      "path": "docs/evidence/source-register.md",
+      "bytes": 2258,
+      "sha256": "3738dd6e09750ed55640059c299ebc000662c077fd3a39f7c4c4b067b35a6f08"
+    },
+    {
+      "path": "docs/evidence/source-research.md",
+      "bytes": 2385,
+      "sha256": "c1a2361ed64a9ce5b80c164923ac96aecdafd662f26fb5e07f249aa2febe8261"
+    },
+    {
+      "path": "docs/reference/data-contracts.md",
+      "bytes": 13937,
+      "sha256": "f8d64cdd0e888efbb1a919fe1fa588bfcd7993555c06352bb59a2230df30d8bd"
+    },
+    {
+      "path": "docs/reference/interfaces-and-operations.md",
+      "bytes": 19582,
+      "sha256": "be637a9d082f252e7775c49d5214547b6be5723aadcaff985ce6f89f8e0e108e"
+    },
+    {
+      "path": "docs/requirements.md",
+      "bytes": 8394,
+      "sha256": "a04b15a41ba6732b6675a462122034f2261512b54438a70b621e5beebd44f445"
+    },
+    {
+      "path": "docs/verification/acceptance-plan.md",
+      "bytes": 9728,
+      "sha256": "39ed1301eedc541e1357dddb72941a3fea6e5f878afcc588270b0f11cd5ee4a7"
+    },
+    {
+      "path": "docs/verification/design-review.md",
+      "bytes": 3931,
+      "sha256": "0d929ddf833703722c8fa4ec60fc1194cc2fe437db07d5f37ab31352d64dbcc9"
+    },
+    {
+      "path": "docs/verification/package-review.md",
+      "bytes": 4029,
+      "sha256": "534d178ad04c20ebc8adc8c46db63c7ca1c13cbcf177cd3e432a7b514a52ec17"
+    },
+    {
+      "path": "docs/verification/review-checklist.md",
+      "bytes": 1391,
+      "sha256": "1e0be23ef61ce5f368fed1b2ad5b706cbff63b5165cadd9f52e6c156c0ffede6"
+    },
+    {
+      "path": "docs/verification/technical-readiness.md",
+      "bytes": 6771,
+      "sha256": "c87f682b33960ea42d586e9ae6714274dedcbdf9a17f4776ee1c3af311ba7174"
+    },
+    {
+      "path": "docs/verification/walkthrough-results.md",
+      "bytes": 4800,
+      "sha256": "d4c74c5c5536b8ff37d30fdb7f62326b0e23efb8b3806d7848dfa3e3ddc2c959"
+    }
+  ]
+}

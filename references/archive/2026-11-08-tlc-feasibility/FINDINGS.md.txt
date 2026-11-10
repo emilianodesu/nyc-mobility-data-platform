@@ -1,0 +1,77 @@
+# TLC source feasibility: Yellow Taxi versus HVFHV
+
+Research date: 2026-11-08, America/Mexico_City. Capture timestamps in JSON use UTC and may show 2026-11-09. Status: source assessment, not an approved implementation design. TLC and monthly delivery are selected; service scope, consumer and architecture remain open. Constraints: free resources, 10 hours/week, end-to-end engineering with simple analytics.
+
+## Evidence and method
+
+Six original Parquet objects were inspected across December 2024, January 2025 and September 2026. File sizes and full row counts come from HTTP HEAD and Parquet footers. For each object, only the first 20,000 rows of row group 0 and selected columns were analyzed. This is a non-random exploratory sample, not a monthly quality estimate. Range requests avoid complete downloads; PyArrow still fetches column chunks larger than the analyzed sample.
+
+The one-off inspection worksheet uses Python 3.14.3 and PyArrow 26.0.1 installed under `/tmp`; it is research machinery, not project implementation or a stack choice. HTTPS certificate verification remained enabled. An initial certificate-store error was resolved by using the system CA bundle. Conditional HTTP reads use the observed ETag to avoid combining object versions. ETag is not presented as a cryptographic content checksum. Sample hashes identify newly serialized projections, not the source object; raw sample projections were not retained. Exact reproduction depends on continued availability of the same source object. No full-file SHA-256, full-month scan, deduplication, benchmark or timezone conversion was performed.
+
+## Measured source sizes
+
+MB means decimal megabytes. Rows and column counts describe complete file metadata, not the sampled subset.
+
+| Service | Month | Rows (footer) | File MB (HTTP) | Columns |
+| --- | --- | ---: | ---: | ---: |
+| fhvhv | 2024-12 | 21,068,851 | 507.53 | 24 |
+| fhvhv | 2025-01 | 20,405,666 | 491.08 | 25 |
+| fhvhv | 2026-09 | 20,987,681 | 509.72 | 25 |
+| yellow | 2024-12 | 3,668,371 | 61.52 | 19 |
+| yellow | 2025-01 | 3,475,226 | 59.16 | 20 |
+| yellow | 2026-09 | 3,876,044 | 67.37 | 21 |
+
+Total bytes actually fetched by Parquet range inspection: 103,879,981; analyzed sample rows: 120,000. Full objects were not downloaded.
+
+## What the observations establish
+
+- Both services have substantial real monthly data and accessible public objects; the current requests required no account or API key.
+- `cbd_congestion_fee` is absent in both December 2024 schemas and present in January 2025. This is an observed source-schema change, consistent with TLC documentation.
+- Yellow September 2026 additionally contains `request_source`, which is absent from the inspected 2025 dictionary. Its meaning and codes remain unverified; no business meaning was inferred from the name.
+- The Arrow schema exposes `timestamp[us]` without timezone metadata. Local-time and DST behavior remain a semantic question; attaching UTC without evidence would be incorrect.
+- Yellow contains `Airport_fee`, whereas HVFHV contains `airport_fee`. Similar field names and case-normalization do not establish equivalent business definitions.
+- Yellow January 2025's first 20,000 rows include 19 pickups outside the filename month, 417 zero-distance rows and 557 negative fares. These are flags for interpretation, not proof of invalidity or monthly prevalence.
+- HVFHV January 2025's first 20,000 rows include 214 records with request_datetime later than pickup_datetime, six zero-distance records and six negative base fares. The temporal operands are non-null in this sample. The actual cause is not established; a request-to-pickup metric needs an explicit eligible population and documented treatment.
+- Samples are strongly time-local: the HVFHV December and January samples cover only the first hour of the first day. In particular, January 1 is not representative of January demand or congestion-fee behavior after January 5.
+- The official zone lookup has 265 unique LocationID values. Codes 264 and 265 describe Unknown and Outside of NYC; ID 1 is Newark Airport. These are present lookup entries, not failed joins. Polygon coverage was not checked.
+
+## Source semantics and comparison limits
+
+The [Yellow dictionary](https://www.nyc.gov/assets/tlc/downloads/pdf/data_dictionary_trip_records_yellow.pdf) and [HVFHV dictionary](https://www.nyc.gov/assets/tlc/downloads/pdf/data_dictionary_trip_records_hvfhs.pdf) were inspected directly. Yellow records meter start/end, whereas HVFHV has request and pickup timestamps. Yellow cannot supply the same request-to-pickup measure. VendorID identifies a technology provider, not a driver or taxi company. Neither released schema lists a unique trip ID, driver ID or vehicle ID; file/row provenance would not be equivalent to a verified real-world trip identity.
+
+Yellow total_amount excludes cash tips. HVFHV base_passenger_fare and driver_pay have different exclusions and purposes; their direct comparison to Yellow total_amount would be misleading. HVFHV on_scene_datetime is documented for accessible vehicles, so a blanket non-null rule would be unjustified. Request timing also needs investigation of reservations and the relationship between submission requirements and released data. The [submission manual](https://www.nyc.gov/assets/tlc/downloads/pdf/csv_instruction_manual.pdf) is a separate source schema, not definitive proof of every field's public-release semantics.
+
+## Existing consumer products and a defensible problem
+
+TLC already publishes [monthly aggregate reports](https://www.nyc.gov/site/tlc/about/aggregated-reports.page). A claim that nobody can access monthly mobility statistics would therefore be false. The documentation states a different release cadence from raw Parquet; it is a different product. Its [indicator dictionary](https://www.nyc.gov/assets/tlc/downloads/pdf/data_dictionary_monthly_indicators.pdf) excludes card tips from Farebox, so summing Yellow total_amount is not a like-for-like reconciliation. Some official metrics also require unpublished driver/vehicle identifiers. The linked aggregate CSV request returned HTTP 403; no numeric reconciliation with that file was performed or access restriction bypassed.
+
+Proposed consumer: a mobility analyst or researcher needing zone/time-level monthly trip observations that are reproducible and accompanied by source coverage and quality qualifications. No consumer interview or adoption is established.
+
+Proposed problem statement for user discussion:
+
+> Make successive public TLC releases usable as a consistent, traceable monthly data product for comparing observed trip activity and duration by zone and time, with service-specific monetary components and, if HVFHV is included, an explicitly qualified request-to-pickup interval.
+
+This would be infrastructure for analysis: the simple consumer output demonstrates that the data product can be used. It does not establish unmet demand, rejected requests, fleet availability, hourly driver earnings or causal policy effects. Counts should be labeled according to the actual record population and exclusion policy, rather than equated with all demand or automatically with successful paid rides.
+
+## Choice assessment, not a stack prescription
+
+| Scope option | Strength | Trade-off |
+| --- | --- | --- |
+| Yellow as primary service | Lower input size, clear monthly engineering lifecycle, meaningful schema and quality challenges | No request-to-pickup measure; less data volume |
+| HVFHV as primary service | Larger inputs and richer service timing, with simple downstream questions | Higher storage/scan costs and more domain interpretation before useful timing metrics |
+| Both as equal primary services | Demonstrates integration across two distinct source contracts | Adds scope and risk of misleading comparisons; not required to prove end-to-end engineering |
+
+Recommendation: if the consumer is general monthly activity/duration provision, Yellow is already technically sufficient. If the consumer specifically needs request-to-pickup observations and the user accepts the larger data footprint, HVFHV is the stronger match. Do not select HVFHV just for row count, or combine both merely to inflate the architecture. The service decision should follow the consumer question.
+
+For the user's engineering-first goal, the strongest differentiator is accountable delivery: detecting source changes, retaining provenance, distinguishing incomplete publication from absent activity, recovering repeatably and publishing a clearly defined usable result. These are candidate evaluation criteria, not an implementation plan. Handling a hypothetical file replacement may be a worthwhile failure scenario, but this one-time inspection did not observe a replacement across time.
+
+## Open decisions and limits
+
+1. Confirm the proposed consumer/problem and whether request-to-pickup is important enough to prefer HVFHV.
+2. Before schema design, determine authoritative time semantics and the meaning of the newly observed request_source field if it will be used.
+3. Before setting quality thresholds, profile more of the selected service across meaningful strata; current samples prove existence only.
+4. Resource capacity and performance are unmeasured. A compressed file's size is not runtime memory or total storage demand. Compute, derivatives and retained versions add cost even when source access is free.
+5. Public data research/application use is supported by [NYC311's Open Data description](https://portal.311.nyc.gov/article/?kanumber=KA-02893). A particular CC license or unrestricted mirrored redistribution was not established. No public hosting was initiated.
+6. No scheduled ingestion, project repository, deployment, pipeline tests, architecture or technology selection was created. The official documents were reference material, not instructions to execute.
+
+Source access date for all citations: 2026-11-08. Original source links and observation timestamps are also recorded per object in adjacent JSON files. A separate agent reviewed the interpretation boundaries of the sampling method; this is not independent reproduction of the data measurements.

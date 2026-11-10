@@ -1,0 +1,48 @@
+# HVFHV — Technical readiness assessment
+
+Date: 2026-11-09. Documentary assessment, not an installed environment or a passed G0 gate. Complements [design verification](DESIGN-VERIFICATION-v1.md).
+
+## 1. Dependency evidence and candidate interpreter
+
+| Component | Public metadata observed | Meaning for this project |
+| --- | --- | --- |
+| [Dagster](https://pypi.org/project/dagster/) | Release 1.13.29; Requires-Python >=3.10,<3.15 | Python 3.15 is outside this release's declared range; prose on the page mentions older support, so use release metadata for resolution |
+| [DuckDB](https://pypi.org/project/duckdb/) | Release 2.0.0; Requires-Python >=3.11.0 | Do not accidentally resolve an older engine by selecting an unsupported interpreter |
+| [PyArrow](https://pypi.org/project/pyarrow/) | Direct page shows 26.0.1; >=3.11; CPython 3.13 macOS 12+ ARM64 wheel listed | A matching native wheel exists for that tuple; this does not prove the whole dependency graph resolves |
+| [Streamlit 1.67.0](https://pypi.org/project/streamlit/1.67.0/) | Requires-Python >=3.11 | Candidate interpreter is within its declared range |
+
+Inferred common declared range for these top-level releases: Python >=3.11,<3.15. Proposed first compatibility attempt: conventional CPython 3.13, not a free-threaded build. This is an engineering selection within the intersection, not a claim that it is the only viable minor. Exact patch, all transitive dependencies, Dagster webserver matching requirements, platform wheel coverage and hashes remain unresolved. No package versions in this table constitute a lockfile.
+
+Evidence limitations: search summaries initially showed PyArrow 26.0.0, while the directly opened release page showed 26.0.1; direct versioned metadata must be captured at resolution time. The attempted versioned Dagster-webserver page could not be fetched through the web tool; its compatibility is unverified, not inferred from name similarity. No package was installed or imported for this assessment.
+
+G0 must capture a complete resolver report for the exact host/interpreter, install only the reviewed resolved artifacts into a dedicated environment, then exercise imports and the required integration operations. A successful top-level range comparison alone cannot close G0.
+
+## 2. Exact aggregation is a priority resource gate
+
+[DuckDB workload documentation](https://duckdb.org/docs/2.0/guides/performance/how_to_tune_workloads) describes out-of-core operators but also intermediate aggregate states that may not spill. Therefore exact percentiles and equality grouping require explicit measurement; setting a temporary-directory cap does not prove bounded memory. The same source notes connection reopening overhead, which is an accepted initial tradeoff for simple short-lived consumer connections.
+
+Required measurements under T12/T22: one-month source/license profiles, daily and monthly grouped intervals, exact all-window interval percentiles, and Q08 equality grouping. Include the widest allowed consumer filter with its separate 1 GiB engine target while a writer is active. A successful monthly writer query does not validate the more restricted reader.
+
+If a query exceeds budget, first evaluate semantically equivalent bounded execution: process independent complete source/cohort groups sequentially; for a single large percentile population, evaluate explicit ordered-value rank selection with interpolation as a separate measured execution plan. Never compute a window p95 from monthly p95 values. Any alternate exact implementation must reproduce the selected quantile convention on hand-calculated fixtures before scale comparison. If exact semantics still cannot fit, record a design amendment; do not silently sample or switch to an approximate function.
+
+These are fallback investigation options, not new implemented algorithms. A failed widest-filter query blocks the advertised unrestricted consumer contract until the execution plan or an explicitly documented filter scope is revised.
+
+## 3. Storage feasibility envelope
+
+At steady state, the selected policy may require three retained released databases plus a fourth candidate. A conservative planning inequality is:
+
+`raw + 3 * released_database_size + candidate_size + spill + control/logs + headroom <= 80 GiB`.
+
+Illustration only: assuming 6 GiB of originals, 16 GiB reserved spill and four equally sized databases leaves less than 14.5 GiB per database after reserving any logs/headroom. The 6 GiB figure is a planning assumption informed by previously inspected approximately half-gigabyte monthly objects, not a measured twelve-month acquisition. Retained revised originals increase it. Database compression, deleted-page reuse and copy-on-write savings are not assumed.
+
+This does not establish infeasibility, but makes the gate concrete: measure physical and logical sizes, candidate peak growth, WAL and filesystem free space. An apparently cheap cloned copy must not hide later copy-on-write allocation. Failed candidates also consume budget until reviewed cleanup. Any storage/retention amendment must preserve a documented recovery contract.
+
+## 4. Timestamp arithmetic and independent numerical oracle
+
+[DuckDB timestamp functions](https://duckdb.org/docs/2.0/sql/functions/timestamp) distinguish time-unit boundary counts from microsecond representation. The design requires microsecond differences on naive recorded values, not whole-second boundary counts. Before subtracting two microsecond integers, promote to a sufficiently wide integer representation to avoid intermediate overflow; unsupported/nonrepresentable source timestamps must fail the adapter explicitly rather than become NULL silently. Epoch-based arithmetic on naive values is an arithmetic technique, not timezone evidence.
+
+Hand-calculated acceptance example, not executed code: request at 12:00:00.900000 and pickup at 12:00:01.100000 gives 0.2 seconds. Reversing them gives -0.2 and the negative class. For eligible observations [0, 0.2, 1, 10], continuous median is 0.6 and p95 is 8.65. Adding one missing pair and one negative pair yields total 6, eligible 4, missing 1, negative 1. These values provide an independent small oracle for T08/T12; they do not simulate TLC prevalence or verify an implementation.
+
+## 5. Readiness conclusion
+
+No documentary evidence found here requires replacing the selected stack. G0 remains pending because package resolution/install/integration were not performed. G2/G4/G5 retain explicit resource gates, particularly exact aggregation and retained database copies. Further prose review cannot establish their runtime behavior. The next empirical task is a bounded compatibility environment followed by one real monthly vertical slice, when implementation is requested.

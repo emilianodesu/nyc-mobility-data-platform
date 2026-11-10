@@ -1,0 +1,27 @@
+{
+  "date_local": "2026-11-08",
+  "timezone": "America/Mexico_City",
+  "operation": "research_source_feasibility",
+  "status": "assessment_complete_problem_selection_open",
+  "python": "3.14.3",
+  "pyarrow": "26.0.1",
+  "full_files_downloaded": false,
+  "sample_design": "first20000 rows of first row group, selected columns; non-random",
+  "full_source_sha256_available": false,
+  "source_identity": "URL + byte count + ETag + Last-Modified; If-Match conditional range reads",
+  "known_access_failure": "official monthly aggregate CSV returned HTTP403; not bypassed",
+  "implementation_authorized": false,
+  "artifacts": {
+    "zone-inspection.json": "57ed2e11974a97b6e6ca18219ce707c36569e650787f92976f3ae447986cc7ff",
+    "inspection_worksheet.py": "1ecf082625184660f701c069f67f858421fd25a9397ee4ae414be05e2b5bb1b8",
+    "yellow_tripdata_2026-09.parquet.inspection.json": "8b56aefa49c7c1cbcb224558b255201d97b158f98328bbfbf12f01292d97fe66",
+    "fhvhv_tripdata_2026-09.parquet.inspection.json": "0539001647d6acca1a037bf092378cff826d54105955ee41dd757945d0c3712b",
+    "fhvhv_tripdata_2025-01.parquet.inspection.json": "d1cfd6922cd5c94ddadf660fc1741702f30abc057b4f653e218d7e13ef254fe2",
+    "yellow_tripdata_2025-01.parquet.inspection.json": "e5b54dd2a75130028e91430e0d70ac341565f4dc280e81e5f36311a9a5468263",
+    "taxi_zone_lookup.csv": "1a99e105092230f8620f301edcca7f80d3080642ff404d28ed957d3fa222c8ed",
+    "FINDINGS.md": "981778a8599745533a2c88a6bc1df23bde80b8d4695920545d3c148500b1ab48",
+    "yellow_tripdata_2024-12.parquet.inspection.json": "5ec01e716a9f51db248d08d8991d4f5b6ae72237423b3d4b6c88fc7ae1d80f65",
+    "fhvhv_tripdata_2024-12.parquet.inspection.json": "4619fa663847332ef4d6110ac527001b9e0a625bce2eb90c952fc2661e4a14ab"
+  },
+  "review": "Separate agent reviewed method, report and JSON consistency; no material findings; not independent reproduction"
+}
