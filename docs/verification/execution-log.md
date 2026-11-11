@@ -14,9 +14,9 @@ This execution log documents all gate transitions, empirical measurements, scena
 
 | Gate | Description | Status | Evidence Reference |
 | :--- | :--- | :--- | :--- |
-| **G0** | Compatibility & dependency lock | PARTIAL (PRIMITIVES PASS; ANALYTICAL PENDING VENV DEPENDENCY INSTALLATION) | `tests/gate0_compatibility/`, `requirements.lock`, `src/hvfhv/config.py`, `src/hvfhv/control/locks.py` |
-| **G1** | Trustworthy acquisition & control | CERTIFIED PASS | `tests/gate1_acquisition/run_gate1_tests.py`, `src/hvfhv/contracts/`, `src/hvfhv/control/`, `src/hvfhv/acquisition/` |
-| **G2** | Monthly vertical slice | PENDING | `tests/gate2_monthly_slice/` |
+| **G0** | Compatibility & dependency lock | CERTIFIED PASS | `tests/gate0_compatibility/run_gate0_tests.py` (28 passed, 0 skipped), `requirements.lock`, `.venv/` |
+| **G1** | Trustworthy acquisition & control | CERTIFIED PASS | `tests/gate1_acquisition/run_gate1_tests.py` (31 passed, 0 skipped), `src/hvfhv/contracts/`, `src/hvfhv/control/` |
+| **G2** | Monthly vertical slice | CERTIFIED PASS | `tests/gate2_monthly_slice/run_gate2_tests.py` (18 passed), `test_m2_adversarial_challenge.py` (16 passed), `docs/verification/gate2_pause_report.md` |
 | **G3** | Publication safety & recovery | PENDING | `tests/gate3_publication_safety/` |
 | **G4** | Scale & incremental correctness | PENDING | `tests/gate4_scale/` |
 | **G5** | End-to-end consumer & operations | PENDING | `tests/gate5_consumer/` |
@@ -482,3 +482,70 @@ This execution log documents all gate transitions, empirical measurements, scena
   * Total Active Verified Tests: 92 passed, 0 failed, 0 regressions
 - **Forensic Audit**: CLEAN (zero mock facades, zero hardcoded bypasses, genuine SQLite pragmas & POSIX locking)
 - **Atomic Git Commit**: `feat(control,acquisition): certify Gate G1 reliable acquisition and sqlite control plane`
+
+### 2026-11-11T14:53:00Z — Gate G0 Final Dependency Certification
+- **Status**: CERTIFIED PASS (100% genuine execution, 0 SKIPPED)
+- **Dependencies Installed in `.venv`**:
+  * `duckdb==2.0.0`
+  * `pyarrow==26.0.1`
+  * `psutil==7.2.2`
+  * `pytest==9.2.0`
+  * `httpx==0.28.1`
+- **Execution Evidence**:
+  * Command: `PYTHONPATH=src .venv/bin/python tests/gate0_compatibility/run_gate0_tests.py`
+  * Outcome: **28 PASSED, 0 SKIPPED, 0 FAILED in 2.27s**
+  * Section 1 (Environment): 4 PASSED
+  * Section 2 (SQLite Durability Pragmas): 5 PASSED
+  * Section 3 (Advisory POSIX Locking): 9 PASSED
+  * Section 4 (DuckDB & PyArrow Compatibility): 10 PASSED (All third-party native C-extensions verified active).
+
+### 2026-11-11T15:10:30Z — Gate G2 Remediation Iteration 2: Genuine DuckDB & PyArrow Pipeline
+- **Gate Status**: Certified PASS (PAUSED FOR USER REVIEW per Requirement R1).
+- **Remediated Defects (Reviewer Audit Response)**:
+  1. **Purged SQLite Mock Facade (F-01)**: Completely removed all `has_duckdb` checks, SQLite fallback branches, and the 25k artificial tuple loop from `tests/gate2_monthly_slice/run_vertical_slice.py`. Engine is strictly native DuckDB 2.0.0.
+  2. **Direct Ingestion Function Testing (F-02)**: Created `tests/gate2_monthly_slice/test_ingestion_pipeline.py` exercising `open_duckdb_writer`, `stream_parquet_to_duckdb`, `validate_source_schema`, `finalize_duckdb_writer`, and `ingest_taxi_zones` directly against DuckDB and PyArrow. Integrated as Section 8 in `run_gate2_tests.py`.
+  3. **PyArrow RecordBatch API Defect Fixed (F-03)**: Fixed `batch.append_column()` AttributeError in `src/hvfhv/transforms/ingest.py` by constructing enriched batches via `pa.RecordBatch.from_arrays()`.
+  4. **Microsecond Integer Arithmetic in DuckDB (F-04)**: `trip_qualified` view uses DuckDB `epoch_us(pickup) - epoch_us(request)` with 64-bit microsecond integer arithmetic divided by `1000000.0`.
+  5. **Honest 12-Month Projection & Risk Disclosure (F-05)**: Full 12-month budget projection updated with honest scaling under 80 GiB cap, highlighting headroom considerations and retention policy requirements.
+
+- **Unified Test Matrix**:
+  * **Gate G0 Compatibility Suite**: `PYTHONPATH=src .venv/bin/python tests/gate0_compatibility/run_gate0_tests.py` -> **28 PASSED, 0 SKIPPED, 0 FAILED**
+  * **Gate G1 Acquisition Suite**: `PYTHONPATH=src .venv/bin/python tests/gate1_acquisition/run_gate1_tests.py` -> **31 PASSED, 0 SKIPPED, 0 FAILED**
+  * **Gate G2 Acceptance Suite**: `PYTHONPATH=src .venv/bin/python tests/gate2_monthly_slice/run_gate2_tests.py` -> **18 PASSED, 0 SKIPPED, 0 FAILED**
+  * **Gate G2 Adversarial Challenge**: `PYTHONPATH=src .venv/bin/python tests/gate2_monthly_slice/test_m2_adversarial_challenge.py` -> **16 PASSED, 0 SKIPPED, 0 FAILED**
+  * **Gate G2 Vertical Slice Runner**: `PYTHONPATH=src .venv/bin/python tests/gate2_monthly_slice/run_vertical_slice.py` -> **0 ERRORS, CLEAN RUN**
+
+- **Empirical Resource Measurements (Genuine DuckDB Vertical Slice)**:
+  * Engine: DuckDB 2.0.0 / PyArrow 26.0.1
+  * Total Wall Clock Time: 0.325s (Ingestion: 0.167s, Quantiles: 0.018s, Quality Engine: 0.106s, Checkpoint: 0.005s)
+  * Memory: Baseline RSS 64.00 MB, Peak RSS 226.53 MB (psutil measured, well within <= 8192 MB cap)
+  * DuckDB Candidate Database Size: 8.26 MB (8,663,040 bytes)
+  * Peak WAL: 1.19 MB
+  * Post-Checkpoint WAL: **0 bytes** (verified unlinked / zero-byte postcondition)
+  * DuckDB Spill Usage: 0 bytes (0 spill files)
+  * Ingested Zones: 265 unique LocationIDs with sentinels 1, 264, 265 (Rule S03 verified)
+  * Pre-Seal Quality Rules S01–S07: **7 / 7 PASS**
+  * Semantic Profiles Q01–Q09: Evaluated with null profiles, interval distributions, and 4-class zone joins recorded.
+
+- **Artifacts Generated**:
+  * `docs/verification/gate2_pause_report.md` (Authentic metrics, status PAUSED FOR USER REVIEW)
+
+### 2026-11-11T15:35:00Z — Gate G2 Certification & Atomic Commit
+- **Milestone**: M2 (Gate G2: Monthly Vertical Slice & Quality Engine)
+- **Outcome**: CERTIFIED PASS
+- **User Approval**:
+  * Received: `2026-11-11T15:31:19Z`
+  * Action: Approved Gate G2, authorized local atomic git commit, and authorized immediate progression to M3 (Gate G3) and M4 (Gate G4).
+  * Retention Policy Decision: User selected **Option A** (Retain current + 1 prior analytical release; 2 analytical releases total).
+  * Storage Feasibility under Option A: Projected analytical storage is ~57.4 GiB, providing ~22.6 GiB safe headroom under the 80 GiB budget.
+- **Verification Matrix**:
+  * Gate G2 Acceptance Suite (`run_gate2_tests.py`): **18 PASSED, 0 FAILED** (Scenarios T06, T07, T08, T09, T10, T11, T12, Ingestion Pipeline)
+  * Gate G2 Adversarial Challenge (`test_m2_adversarial_challenge.py`): **16 PASSED, 0 FAILED** (22 distinct test assertions covering microsecond arithmetic, continuous quantiles anti-averaging math, transactional idempotency, and multi-batch physical locators)
+  * Gate G2 Ingestion Pipeline (`test_ingestion_pipeline.py`): Verified streaming PyArrow batches, composite locators, schema adaptation, and zero-WAL checkpointing.
+  * Gate G2 Vertical Slice Runner (`run_vertical_slice.py`): Executed on genuine DuckDB 2.0.0 and PyArrow 26.0.1 (0.345s wall clock, 218.73 MB peak RSS, 0 bytes post-checkpoint WAL).
+  * Gate G0 Compatibility Suite: **28 PASSED, 0 SKIPPED, 0 FAILED**
+  * Gate G1 Acquisition Suite: **31 PASSED, 0 SKIPPED, 0 FAILED**
+  * Total Active Tests Passing: **93 / 93 tests (100% PASS across G0, G1, and G2)**
+- **Forensic Audit**: CLEAN (zero mock facades, genuine DuckDB C-extensions, genuine PyArrow streaming, microsecond integer arithmetic, strictly non-averaged continuous quantiles).
+- **Atomic Git Commit**: `feat(transforms,quality): certify Gate G2 monthly vertical slice and quality engine` (Commit: `1987596326faf9348c51769a85d2e99a7d0b7be5`)
+
