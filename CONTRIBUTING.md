@@ -1,11 +1,39 @@
-# Contributing to the design
+# Contributing to the HVFHV Data Reliability Platform
 
-This snapshot is for review before implementation. Report findings with document section, counterexample, affected requirement IDs and a proposed correction. Do not mark a scenario passed because its description exists.
+All contributions to this platform must adhere strictly to the engineering invariants, architectural contracts, and verification gates established in the repository.
 
-Changes to source interpretation, metric definitions, storage/publication or stack need a decision record or explicit amendment. Preserve prior rationale and record which requirement/test changes. Update schema and rule versions when behavior changes; implementation later must bind results to the exact versions used.
+---
 
-Documentation is English. Distinguish user-confirmed choices, assistant-authored design defaults, inspected source evidence, hand calculations and unexecuted runtime checks. Do not invent review approvals, benchmark results or skills demonstrated by generated code.
+## 1. Principles & Invariants
 
-Do not add personal CareerBooster material, source data dumps, secrets, environment folders or agent-session memory. Only project-specific public-source evidence belongs in a later public repository. Dataset terms and code licensing are separate. No license grant is asserted by this documentation snapshot.
+1. **Preserve Mathematical & Semantic Invariants**:
+   - Timestamp arithmetic must remain 64-bit microsecond integer subtraction divided by `1,000,000.0` on naive source timestamps without timezone manipulation.
+   - Percentiles must be computed as Type 7 continuous quantiles (`quantile_cont`) directly over eligible trips; precomputed daily percentiles must never be averaged across dates or zones.
+   - The 3-class interval count identity must strictly hold:
+     $$\text{total} = \text{eligible\_nonnegative} + \text{negative\_recorded\_interval} + \text{missing\_timestamp}$$
+2. **Never Bypass Access Controls or Integrity Gates**:
+   - Mutating operations must strictly hold the advisory POSIX `writer.lock`.
+   - Analytical queries must respect `query.lock` and perform out-of-cache eligibility verification against SQLite `registry.sqlite` both before query execution and after query completion.
+   - Never mark a test PASS without genuine execution evidence.
+3. **Storage & Retention Compliance**:
+   - Total project data under `$DATA_ROOT` must strictly not exceed the 80.0 GiB budget.
+   - Analytical release retention must follow **Option A**: retain the current verified release plus exactly 1 prior release (2 analytical releases total). Older analytical databases are unlinked while manifests and validation receipts remain permanently preserved for provenance and audit.
+4. **Git & Repository Boundary**:
+   - This project maintains a strict local-only repository. Never configure remote publishing, push to public networks, or transmit raw data outside the local workspace.
 
-No test/build commands exist yet. The acceptance plan defines future checks; real invocations belong here only after verified implementation. Public push, deployment and bulk data redistribution are outside this review stage.
+---
+
+## 2. Verification Protocol
+
+Any proposed changes must pass the full regression test suite across all 6 gates:
+```bash
+export PYTHONPATH=src
+.venv/bin/python3 tests/gate0_compatibility/run_gate0_tests.py
+.venv/bin/python3 tests/gate1_acquisition/run_gate1_tests.py
+.venv/bin/python3 tests/gate2_monthly_slice/run_gate2_tests.py
+.venv/bin/python3 tests/gate3_publication_safety/run_gate3_tests.py
+.venv/bin/python3 tests/gate4_scale/run_gate4_tests.py
+.venv/bin/python3 tests/gate5_consumer/run_gate5_tests.py
+```
+
+All test receipts and execution measurements must be documented in `docs/verification/execution-log.md` with timestamps, exact command strings, and verified output metrics.
