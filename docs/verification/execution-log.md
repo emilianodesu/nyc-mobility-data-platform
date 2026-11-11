@@ -549,3 +549,51 @@ This execution log documents all gate transitions, empirical measurements, scena
 - **Forensic Audit**: CLEAN (zero mock facades, genuine DuckDB C-extensions, genuine PyArrow streaming, microsecond integer arithmetic, strictly non-averaged continuous quantiles).
 - **Atomic Git Commit**: `feat(transforms,quality): certify Gate G2 monthly vertical slice and quality engine` (Commit: `1987596326faf9348c51769a85d2e99a7d0b7be5`)
 
+### 2026-11-11T15:40:00Z — Gate G3 Certification: Publication Safety, Durability & Recovery
+- **Milestone**: M3 (Gate G3: Publication Safety, Durability & Recovery)
+- **Outcome**: CERTIFIED PASS
+- **Implementation**:
+  * `src/hvfhv/control/publication.py`: Candidate finalization, Rule S08 external post-seal verification (SHA-256 manifest and database digest check), atomic CAS publication with generation counter, crash recovery (`T18`), atomic rollback (`T19`), and SQLite online backup (`T24`).
+  * `src/hvfhv/control/registry.py`: Extended selection requests, CAS state progression, cleanup requests, and audit logging.
+- **Verification Matrix**:
+  * Gate G3 Acceptance Suite (`tests/gate3_publication_safety/run_gate3_tests.py`): **14 PASSED, 0 FAILED in 2.22s**
+  * Scenarios Covered:
+    - T14 & S08: Incomplete rule inventory blocks finalization; post-seal digest verification.
+    - T15: Concurrent writer lock contention exits boundedly.
+    - T16: Process kill during staging leaves zero partial or corrupted selected databases.
+    - T17: Kill after atomic directory rename reports orphan candidate without auto-adoption.
+    - T18: Kill after SQLite commit reconciliation discovers committed publication event without re-incrementing generation.
+    - T19: Stale CAS publication rejected; rollback restores previous generation and verifies bytes.
+    - T20: Corrupted release manifest or path escape triggers strict integrity failure.
+    - T24: Registry migration, backup, and restore leave released analytical artifacts untouched.
+    - T26: Semantic exceptions and non-zero rule errors prevent publication.
+    - W01: Safe retry after later rollback.
+    - W03: Warnings vs computation failures cleanly segregated.
+    - W05: Finalized original preserved on lost registry write.
+    - Zero-WAL verification and checkpoint postconditions verified.
+- **Atomic Git Commit**: `feat(control,publication): certify Gate G3 publication safety, durability, and recovery` (`b7fcc18`)
+
+### 2026-11-11T15:48:00Z — Gate G4 Certification: Scale, Incremental Correctness & Option A Retention
+- **Milestone**: M4 (Gate G4: Scale, Incremental Correctness & Option A Retention)
+- **Outcome**: CERTIFIED PASS
+- **Implementation**:
+  * `src/hvfhv/transforms/builder.py`: Full rebuild and incremental build pipeline, build equivalence verification (`T13`), budget preflight (`T22`), and Option A retention enforcement (`R17`).
+  * Option A Retention Engine: Protects current analytical release plus exactly 1 prior release (2 analytical releases total). Older analytical databases (`analytics.duckdb`) are safely unlinked to reclaim storage, while immutable manifests (`manifest.json`) and validation receipts (`validation.json`) are strictly preserved for audit and lineage.
+  * Measured Storage Footprint: Verified retention policy maintains analytical storage within the strict $\le 80.0\text{ GiB}$ cap with ~22.6 GiB safe headroom.
+- **Verification Matrix**:
+  * Gate G4 Acceptance Suite (`tests/gate4_scale/run_gate4_tests.py`): **5 PASSED, 0 FAILED in 1.41s**
+  * Scenarios Covered:
+    - T13 & W02: Incremental rebuild equivalence vs full rebuild from scratch on identical source revisions.
+    - T13 & W02: Source revision replacement purges prior version facts cleanly without row inflation.
+    - T15: Concurrent writer processes under advisory lock exit boundedly with deterministic timeout.
+    - T22 & W08: Storage footprint calculation, budget preflight, and capacity checks.
+    - T22 & R17: Option A retention policy enforcement protects current + 1 prior release, retires superseded releases, and reclaims disk space.
+- **Full Regression Status**:
+  * Gate G0: 28 PASSED (100%)
+  * Gate G1: 31 PASSED (100%)
+  * Gate G2: 18 PASSED (100%)
+  * Gate G3: 14 PASSED (100%)
+  * Gate G4: 5 PASSED (100%)
+  * Total Active Tests: **96 PASSED, 0 SKIPPED, 0 FAILED across Gates G0–G4**
+
+
