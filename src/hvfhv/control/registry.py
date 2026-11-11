@@ -351,6 +351,16 @@ class InvalidReleaseStatusError(RegistryError):
     pass
 
 
+class ReleaseIntegrityError(RegistryError):
+    """Raised when release artifact files on disk fail SHA-256 or structural checks."""
+    pass
+
+
+class RollbackError(RegistryError):
+    """Raised when a rollback operation cannot be completed."""
+    pass
+
+
 # ---------------------------------------------------------------------------
 # Registry Class
 # ---------------------------------------------------------------------------
@@ -480,7 +490,7 @@ class Registry:
         executes DDL transactionally, verifies integrity and foreign keys before commit.
         Downgrades are strictly forbidden.
         """
-        with writer_lock(self.data_root):
+        with writer_lock(self.data_root, reentrant=True):
             con = self.get_connection()
             try:
                 current_v = self.get_current_schema_version(con)
@@ -593,8 +603,14 @@ class Registry:
             src_con = sqlite3.connect(bak_file)
             target_con = sqlite3.connect(self.db_path)
             try:
+                try:
+                    configure_sqlite_connection(target_con)
+                except sqlite3.DatabaseError:
+                    # Target database disk image may be malformed/corrupted prior to restore
+                    pass
                 # Backup src into target
                 src_con.backup(target_con, pages=-1)
+                configure_sqlite_connection(target_con)
             finally:
                 src_con.close()
                 target_con.close()
@@ -624,7 +640,7 @@ class Registry:
         source_month: str | None = None,
     ) -> None:
         """Register or verify an official source object."""
-        with writer_lock(self.data_root):
+        with writer_lock(self.data_root, reentrant=True):
             con = self.get_connection()
             try:
                 cur = con.cursor()
@@ -658,7 +674,7 @@ class Registry:
         obs_id = str(uuid.uuid4())
         obs_time = observed_at_utc or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
-        with writer_lock(self.data_root):
+        with writer_lock(self.data_root, reentrant=True):
             con = self.get_connection()
             try:
                 cur = con.cursor()
@@ -698,7 +714,7 @@ class Registry:
         """Register an accepted source revision. Idempotent on (logical_source_id, content_sha256)."""
         accepted_time = accepted_at_utc or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
-        with writer_lock(self.data_root):
+        with writer_lock(self.data_root, reentrant=True):
             con = self.get_connection()
             try:
                 cur = con.cursor()
@@ -750,7 +766,7 @@ class Registry:
     ) -> None:
         """Create a new build attempt in PLANNED phase and RUNNING outcome."""
         now_utc = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        with writer_lock(self.data_root):
+        with writer_lock(self.data_root, reentrant=True):
             con = self.get_connection()
             try:
                 cur = con.cursor()
@@ -795,7 +811,7 @@ class Registry:
     ) -> None:
         """Advance attempt phase and record append-only attempt event."""
         now_utc = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        with writer_lock(self.data_root):
+        with writer_lock(self.data_root, reentrant=True):
             con = self.get_connection()
             try:
                 cur = con.cursor()
@@ -855,7 +871,7 @@ class Registry:
     ) -> None:
         """Mark attempt as completed (SUCCEEDED, FAILED, CANCELLED, INTERRUPTED, CONFLICT)."""
         now_utc = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        with writer_lock(self.data_root):
+        with writer_lock(self.data_root, reentrant=True):
             con = self.get_connection()
             try:
                 cur = con.cursor()
@@ -890,7 +906,7 @@ class Registry:
     ) -> None:
         """Register a finalized release directory and its constituent source revisions in FINALIZED status."""
         fin_time = finalized_at_utc or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        with writer_lock(self.data_root):
+        with writer_lock(self.data_root, reentrant=True):
             con = self.get_connection()
             try:
                 cur = con.cursor()
@@ -945,7 +961,7 @@ class Registry:
         ver_id = str(uuid.uuid4())
         ver_time = verified_at_utc or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
-        with writer_lock(self.data_root):
+        with writer_lock(self.data_root, reentrant=True):
             con = self.get_connection()
             try:
                 cur = con.cursor()
@@ -1007,7 +1023,7 @@ class Registry:
     ) -> None:
         """Mark a release as REJECTED. Immediately revokes serving eligibility without mutating files."""
         now_utc = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        with writer_lock(self.data_root):
+        with writer_lock(self.data_root, reentrant=True):
             con = self.get_connection()
             try:
                 cur = con.cursor()
@@ -1043,7 +1059,7 @@ class Registry:
     ) -> None:
         """Mark a release as RETIRED prior to payload cleanup. RETIRED is terminal."""
         now_utc = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        with writer_lock(self.data_root):
+        with writer_lock(self.data_root, reentrant=True):
             con = self.get_connection()
             try:
                 cur = con.cursor()
@@ -1125,7 +1141,7 @@ class Registry:
         req_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
         now_utc = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
-        with writer_lock(self.data_root):
+        with writer_lock(self.data_root, reentrant=True):
             con = self.get_connection()
             try:
                 cur = con.cursor()
@@ -1174,7 +1190,7 @@ class Registry:
         with the same operation_key discovers the committed event and returns
         the historical outcome without re-incrementing the generation!
         """
-        with writer_lock(self.data_root):
+        with writer_lock(self.data_root, reentrant=True):
             con = self.get_connection()
             try:
                 cur = con.cursor()
@@ -1208,6 +1224,12 @@ class Registry:
                 ).fetchone()
 
                 if existing_event:
+                    curr_row = cur.execute(
+                        "SELECT release_id, generation FROM current_release WHERE id = 1;"
+                    ).fetchone()
+                    current_rel_id = curr_row[0] if curr_row else None
+                    current_gen = curr_row[1] if curr_row else 0
+                    is_current = (existing_event[4] == current_rel_id and existing_event[2] == current_gen)
                     return {
                         "status": "ALREADY_COMMITTED",
                         "event_id": existing_event[0],
@@ -1216,6 +1238,9 @@ class Registry:
                         "event_at_utc": existing_event[3],
                         "selected_release_id": existing_event[4],
                         "previous_release_id": existing_event[5],
+                        "is_current": is_current,
+                        "current_generation": current_gen,
+                        "current_release_id": current_rel_id,
                     }
 
                 # 3. Short CAS transaction
@@ -1313,6 +1338,199 @@ class Registry:
             finally:
                 con.close()
 
+    def query_selection_status(self, operation_key: str) -> dict[str, Any]:
+        """Query the status of an operation key across requests, events, and active pointer.
+        
+        Adheres to Scenario T18: enables unacknowledged commit recovery and reconciliation
+        without triggering state mutations.
+        """
+        con = self.get_connection()
+        try:
+            cur = con.cursor()
+
+            # 1. Fetch current release pointer
+            curr_row = cur.execute(
+                "SELECT release_id, generation FROM current_release WHERE id = 1;"
+            ).fetchone()
+            current_rel_id = curr_row[0] if curr_row else None
+            current_gen = curr_row[1] if curr_row else 0
+
+            # 2. Check publication_events (committed state)
+            ev = cur.execute(
+                """
+                SELECT event_id, operation_kind, previous_release_id, selected_release_id,
+                       previous_generation, new_generation, attempt_id, reason, event_at_utc
+                FROM publication_events
+                WHERE operation_key = ?;
+                """,
+                (operation_key,),
+            ).fetchone()
+
+            if ev:
+                selected_rel_id = ev[3]
+                new_gen = ev[5]
+                is_current = (selected_rel_id == current_rel_id and new_gen == current_gen)
+                return {
+                    "status": "COMMITTED",
+                    "operation_key": operation_key,
+                    "event_id": ev[0],
+                    "operation_kind": ev[1],
+                    "previous_release_id": ev[2],
+                    "selected_release_id": selected_rel_id,
+                    "previous_generation": ev[4],
+                    "new_generation": new_gen,
+                    "attempt_id": ev[6],
+                    "reason": ev[7],
+                    "event_at_utc": ev[8],
+                    "is_current": is_current,
+                    "current_generation": current_gen,
+                    "current_release_id": current_rel_id,
+                }
+
+            # 3. Check selection_requests (registered intent, uncommitted)
+            req = cur.execute(
+                """
+                SELECT target_release_id, expected_parent_release_id,
+                       expected_parent_generation, operation_kind, reason, created_at_utc
+                FROM selection_requests
+                WHERE operation_key = ?;
+                """,
+                (operation_key,),
+            ).fetchone()
+
+            if req:
+                target_rel_id = req[0]
+                expected_parent_id = req[1]
+                expected_parent_gen = req[2]
+                can_retry = (expected_parent_gen == current_gen and expected_parent_id == current_rel_id)
+                return {
+                    "status": "PENDING_OR_UNCOMMITTED",
+                    "operation_key": operation_key,
+                    "target_release_id": target_rel_id,
+                    "expected_parent_release_id": expected_parent_id,
+                    "expected_parent_generation": expected_parent_gen,
+                    "operation_kind": req[3],
+                    "reason": req[4],
+                    "created_at_utc": req[5],
+                    "can_retry": can_retry,
+                    "current_generation": current_gen,
+                    "current_release_id": current_rel_id,
+                }
+
+            return {
+                "status": "NOT_REGISTERED",
+                "operation_key": operation_key,
+                "current_generation": current_gen,
+                "current_release_id": current_rel_id,
+            }
+        finally:
+            con.close()
+
+    def verify_release_integrity(
+        self,
+        release_id: str,
+        releases_dir: Path | str | None = None,
+    ) -> dict[str, Any]:
+        """Verify the cryptographic and physical integrity of a retained release artifact on disk.
+        
+        Invariants:
+        1. Checks database record: status must be 'VERIFIED'.
+        2. Checks post-seal attestation in release_verifications.
+        3. Verifies physical existence and SHA-256 of manifest.json, validation.json, and analytics.duckdb.
+        4. Verifies absence of uncheckpointed WAL file (analytics.duckdb.wal).
+        """
+        con = self.get_connection()
+        try:
+            cur = con.cursor()
+            rel = cur.execute(
+                """
+                SELECT release_directory, manifest_sha256, database_sha256, validation_sha256, status
+                FROM releases WHERE release_id = ?;
+                """,
+                (release_id,),
+            ).fetchone()
+
+            if not rel:
+                raise RegistryError(f"Release '{release_id}' not found in registry.")
+
+            rel_dir_str, exp_manifest_sha, exp_db_sha, exp_val_sha, status = rel
+
+            if status != "VERIFIED":
+                raise InvalidReleaseStatusError(
+                    f"Release '{release_id}' has status '{status}'. Only 'VERIFIED' releases can be selected or rolled back."
+                )
+
+            # Check post-seal attestation exists
+            att = cur.execute(
+                "SELECT verification_id FROM release_verifications WHERE release_id = ?;",
+                (release_id,),
+            ).fetchone()
+            if not att:
+                raise RegistryError(f"Release '{release_id}' has no post-seal attestation in release_verifications.")
+        finally:
+            con.close()
+
+        # Resolve physical directory
+        if releases_dir is not None:
+            base_dir = Path(releases_dir)
+            target_dir = base_dir / release_id if (base_dir / release_id).exists() else base_dir
+        else:
+            base_dir = self.data_root / "releases"
+            target_dir = base_dir / release_id
+
+        if not target_dir.exists():
+            target_dir = self.data_root / rel_dir_str
+        if not target_dir.exists():
+            raise ReleaseIntegrityError(f"Release directory missing on disk: {target_dir}")
+
+        manifest_path = target_dir / "manifest.json"
+        db_path = target_dir / "analytics.duckdb"
+        val_path = target_dir / "validation.json"
+        wal_path = target_dir / "analytics.duckdb.wal"
+
+        if not manifest_path.exists():
+            raise ReleaseIntegrityError(f"manifest.json missing in {target_dir}")
+        if not db_path.exists():
+            raise ReleaseIntegrityError(f"analytics.duckdb missing in {target_dir}")
+        if not val_path.exists():
+            raise ReleaseIntegrityError(f"validation.json missing in {target_dir}")
+        if wal_path.exists() and wal_path.stat().st_size > 0:
+            raise ReleaseIntegrityError(f"Uncheckpointed WAL file detected: {wal_path} ({wal_path.stat().st_size} bytes)")
+
+        # Compute file digests in 64 KiB chunks
+        def _calc_sha256(p: Path) -> str:
+            h = hashlib.sha256()
+            with open(p, "rb") as f:
+                while chunk := f.read(65536):
+                    h.update(chunk)
+            return h.hexdigest()
+
+        actual_manifest_sha = _calc_sha256(manifest_path)
+        actual_db_sha = _calc_sha256(db_path)
+        actual_val_sha = _calc_sha256(val_path)
+
+        if actual_manifest_sha != exp_manifest_sha:
+            raise ReleaseIntegrityError(
+                f"manifest.json digest mismatch for {release_id}: expected {exp_manifest_sha}, got {actual_manifest_sha}"
+            )
+        if actual_db_sha != exp_db_sha:
+            raise ReleaseIntegrityError(
+                f"analytics.duckdb digest mismatch for {release_id}: expected {exp_db_sha}, got {actual_db_sha}"
+            )
+        if actual_val_sha != exp_val_sha:
+            raise ReleaseIntegrityError(
+                f"validation.json digest mismatch for {release_id}: expected {exp_val_sha}, got {actual_val_sha}"
+            )
+
+        return {
+            "release_id": release_id,
+            "release_directory": str(target_dir),
+            "manifest_sha256": actual_manifest_sha,
+            "database_sha256": actual_db_sha,
+            "validation_sha256": actual_val_sha,
+            "status": "VERIFIED",
+        }
+
     def rollback_release(
         self,
         operation_key: str,
@@ -1321,8 +1539,21 @@ class Registry:
         expected_parent_release_id: str | None = None,
         reason: str | None = None,
         attempt_id: str | None = None,
+        verify_bytes: bool = False,
+        releases_dir: Path | str | None = None,
     ) -> dict[str, Any]:
-        """Perform atomic compare-and-swap (CAS) rollback to a previously verified release."""
+        """Perform atomic compare-and-swap (CAS) rollback to a previously verified release.
+        
+        Adheres to Scenario T19:
+        1. If verify_bytes is True, re-verifies physical SHA-256 digests of target release files.
+        2. Records selection request with operation_kind='rollback'.
+        3. Enforces CAS validation (rejects stale parent/generation).
+        4. Updates current_release singleton to target_release_id and increments generation.
+        5. Appends publication_events record with operation_kind='rollback' and reason.
+        """
+        if verify_bytes:
+            self.verify_release_integrity(target_release_id, releases_dir=releases_dir)
+
         self.record_selection_request(
             operation_key=operation_key,
             target_release_id=target_release_id,
@@ -1349,7 +1580,7 @@ class Registry:
     ) -> None:
         """Persist reviewed operator cleanup intent."""
         now_utc = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        with writer_lock(self.data_root):
+        with writer_lock(self.data_root, reentrant=True):
             con = self.get_connection()
             try:
                 cur = con.cursor()
@@ -1377,7 +1608,7 @@ class Registry:
     ) -> None:
         """Record prepared cleanup items prior to deletion."""
         now_utc = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        with writer_lock(self.data_root):
+        with writer_lock(self.data_root, reentrant=True):
             con = self.get_connection()
             try:
                 cur = con.cursor()
@@ -1409,7 +1640,7 @@ class Registry:
     ) -> None:
         """Update cleanup item outcome after file deletion (DELETED, FAILED, SKIPPED)."""
         now_utc = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        with writer_lock(self.data_root):
+        with writer_lock(self.data_root, reentrant=True):
             con = self.get_connection()
             try:
                 cur = con.cursor()

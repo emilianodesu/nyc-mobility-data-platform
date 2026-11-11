@@ -17,7 +17,7 @@ This execution log documents all gate transitions, empirical measurements, scena
 | **G0** | Compatibility & dependency lock | CERTIFIED PASS | `tests/gate0_compatibility/run_gate0_tests.py` (28 passed, 0 skipped), `requirements.lock`, `.venv/` |
 | **G1** | Trustworthy acquisition & control | CERTIFIED PASS | `tests/gate1_acquisition/run_gate1_tests.py` (31 passed, 0 skipped), `src/hvfhv/contracts/`, `src/hvfhv/control/` |
 | **G2** | Monthly vertical slice | CERTIFIED PASS | `tests/gate2_monthly_slice/run_gate2_tests.py` (18 passed), `test_m2_adversarial_challenge.py` (16 passed), `docs/verification/gate2_pause_report.md` |
-| **G3** | Publication safety & recovery | PENDING | `tests/gate3_publication_safety/` |
+| **G3** | Publication safety & recovery | CERTIFIED PASS | `tests/gate3_publication_safety/run_gate3_tests.py` (14 passed, 0 skipped), `src/hvfhv/control/publication.py` |
 | **G4** | Scale & incremental correctness | PENDING | `tests/gate4_scale/` |
 | **G5** | End-to-end consumer & operations | PENDING | `tests/gate5_consumer/` |
 | **G6** | Portfolio evidence & handoff | PENDING | Final verification audit |
