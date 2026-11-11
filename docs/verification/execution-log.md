@@ -596,4 +596,31 @@ This execution log documents all gate transitions, empirical measurements, scena
   * Gate G4: 5 PASSED (100%)
   * Total Active Tests: **96 PASSED, 0 SKIPPED, 0 FAILED across Gates G0–G4**
 
+### 2026-11-11T15:58:00Z — Gate G5 Certification: End-to-End Consumer & Operations
+- **Milestone**: M5 (Gate G5: End-to-End Consumer & Operations)
+- **Outcome**: CERTIFIED PASS
+- **Implementation**:
+  * `src/hvfhv/consumer/reader.py`: Read-only `ReleaseReader` interface pinned to verified releases; performs mandatory out-of-cache eligibility validation against SQLite control plane prior to and post query execution (`R16`, `T21`, `T27`); acquires POSIX `query.lock` on cache misses; DuckDB reader configured with bounded resource targets (1 thread, 1 GB memory target, 2 GB reader spill cap; `R20`); in-memory bounded LRU cache (max 32 entries, max 10k rows, max 5 MiB serialized payload; `T28`); dual analytical views (Reliability and Recorded Intervals with 3-class interval count identity and explicit non-SLA / naive microsecond arithmetic disclosure).
+  * `src/hvfhv/consumer/app.py`: Streamlit analytical dashboard with dual views: Data Reliability View (coverage, rules S01–S08, profiles Q01–Q09, live operational telemetry) and Recorded Intervals View (interactive filter controls, exact `quantile_cont` p50/p95 over eligible trips, complete denominator breakdown `total = missing + negative + eligible`). Includes headless runner for automated validation.
+  * `src/hvfhv/orchestration/defs.py`: Dagster asset definitions (`tlc_hvfhv_raw`, `taxi_zone_raw`, `analytical_release`), asset checks mirroring S01–S08 and Q01–Q09 (`T23`), daily TLC discovery schedule (`R18`), and frontier scan with gap detection and ordered catchup sequencing (`R25`, `T25`).
+- **Verification Matrix**:
+  * Gate G5 Acceptance Suite (`tests/gate5_consumer/run_gate5_tests.py`): **12 PASSED, 0 FAILED in 2.60s**
+  * Scenarios Covered:
+    - T21 & W04: Read-only dashboard queries and concurrent background operations under `query.lock` and `writer.lock` execute safely without deadlock or corruption.
+    - T21: Unregistered release raises `IneligibleReleaseError`.
+    - T21: Missing DuckDB file raises `ArtifactNotFoundError`.
+    - T23 & R18: Asset checks accurately mirror pre-seal rules S01–S08 and profiles Q01–Q09; failing pre-seal checks surface as asset check failures; missing validation receipts raise `OrchestrationError`.
+    - T25 & R25: Frontier scan with gaps identifies missing intermediate months (`2024-11`), marks topology as fragmented (`is_contiguous == False`), and produces ordered catch-up recommendations without corrupting current release.
+    - T27: Retired release access raises `RetiredReleaseError` immediately; out-of-cache check blocks serving even when query was previously cached; audit manifests (`manifest.json`, `validation.json`) remain strictly preserved on disk.
+    - T28: In-memory LRU cache bounded at 32 entries with automatic eviction; query results bounded by 10,000 rows max; memory RSS remains strictly bounded during heavy query loops.
+- **Full System Regression Status (Gates G0–G5)**:
+  * Gate G0: 28 PASSED (100%)
+  * Gate G1: 31 PASSED (100%)
+  * Gate G2: 18 PASSED (100%)
+  * Gate G3: 14 PASSED (100%)
+  * Gate G4: 5 PASSED (100%)
+  * Gate G5: 12 PASSED (100%)
+  * Total Active Tests: **108 PASSED, 0 SKIPPED, 0 FAILED (100% PASS across all gates)**
+
+
 
