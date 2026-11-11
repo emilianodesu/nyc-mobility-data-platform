@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "v1",
+  "schemas": {
+    "hvfhv_24col_pre2025.v1": {
+      "schema_id": "hvfhv_24col_pre2025.v1",
+      "version": "v1",
+      "format": "parquet",
+      "description": "NYC TLC High Volume For-Hire Vehicle trip observations for months prior to 2025-01.",
+      "applicable_period_predicate": "period < '2025-01'",
+      "expected_column_count": 24,
+      "columns": [
+        {"name": "hvfhs_license_num", "arrow_types": ["string", "large_string"], "duckdb_type": "VARCHAR", "normalized_name": "hvfhs_license_num", "nullable": true, "policy": "Preserve null and exact string; no trim or case folding."},
+        {"name": "dispatching_base_num", "arrow_types": ["string", "large_string"], "duckdb_type": "VARCHAR", "normalized_name": "dispatching_base_num", "nullable": true, "policy": "Preserve null and exact string."},
+        {"name": "originating_base_num", "arrow_types": ["string", "large_string"], "duckdb_type": "VARCHAR", "normalized_name": "originating_base_num", "nullable": true, "policy": "Preserve null and exact string."},
+        {"name": "request_datetime", "arrow_types": ["timestamp[us]"], "duckdb_type": "TIMESTAMP", "normalized_name": "request_datetime", "nullable": true, "policy": "Naive timestamp at microsecond precision (no timezone)."},
+        {"name": "on_scene_datetime", "arrow_types": ["timestamp[us]"], "duckdb_type": "TIMESTAMP", "normalized_name": "on_scene_datetime", "nullable": true, "policy": "Naive timestamp at microsecond precision (no timezone). Historically high null rate."},
+        {"name": "pickup_datetime", "arrow_types": ["timestamp[us]"], "duckdb_type": "TIMESTAMP", "normalized_name": "pickup_datetime", "nullable": true, "policy": "Naive timestamp at microsecond precision (no timezone). Primary event time."},
+        {"name": "dropoff_datetime", "arrow_types": ["timestamp[us]"], "duckdb_type": "TIMESTAMP", "normalized_name": "dropoff_datetime", "nullable": true, "policy": "Naive timestamp at microsecond precision (no timezone)."},
+        {"name": "PULocationID", "arrow_types": ["int32", "int64"], "duckdb_type": "INTEGER", "normalized_name": "pu_location_id", "nullable": true, "policy": "Pickup location ID; foreign key to zone_reference."},
+        {"name": "DOLocationID", "arrow_types": ["int32", "int64"], "duckdb_type": "INTEGER", "normalized_name": "do_location_id", "nullable": true, "policy": "Dropoff location ID; foreign key to zone_reference."},
+        {"name": "trip_miles", "arrow_types": ["double", "float"], "duckdb_type": "DOUBLE", "normalized_name": "trip_miles", "nullable": true, "policy": "Reported trip miles; negative, zero, and NaN/Inf values preserved and classified in Q06."},
+        {"name": "trip_time", "arrow_types": ["int64", "int32"], "duckdb_type": "BIGINT", "normalized_name": "trip_time", "nullable": true, "policy": "Source trip duration in integer seconds; retained independently of timestamp difference."},
+        {"name": "base_passenger_fare", "arrow_types": ["double"], "duckdb_type": "DOUBLE", "normalized_name": "base_passenger_fare", "nullable": true, "policy": "Reported fare; preserve raw floating point values."},
+        {"name": "tolls", "arrow_types": ["double"], "duckdb_type": "DOUBLE", "normalized_name": "tolls", "nullable": true, "policy": "Reported toll amount."},
+        {"name": "bcf", "arrow_types": ["double"], "duckdb_type": "DOUBLE", "normalized_name": "bcf", "nullable": true, "policy": "Black Car Fund surcharge."},
+        {"name": "sales_tax", "arrow_types": ["double"], "duckdb_type": "DOUBLE", "normalized_name": "sales_tax", "nullable": true, "policy": "Reported sales tax."},
+        {"name": "congestion_surcharge", "arrow_types": ["double"], "duckdb_type": "DOUBLE", "normalized_name": "congestion_surcharge", "nullable": true, "policy": "NYS congestion surcharge."},
+        {"name": "airport_fee", "arrow_types": ["double"], "duckdb_type": "DOUBLE", "normalized_name": "airport_fee", "nullable": true, "policy": "Airport access fee."},
+        {"name": "tips", "arrow_types": ["double"], "duckdb_type": "DOUBLE", "normalized_name": "tips", "nullable": true, "policy": "Reported passenger tip."},
+        {"name": "driver_pay", "arrow_types": ["double"], "duckdb_type": "DOUBLE", "normalized_name": "driver_pay", "nullable": true, "policy": "Reported driver pay; not inferred total compensation."},
+        {"name": "shared_request_flag", "arrow_types": ["string", "large_string"], "duckdb_type": "VARCHAR", "normalized_name": "shared_request_flag", "nullable": true, "policy": "Preserve raw values ('Y', 'N', null); no boolean coercion."},
+        {"name": "shared_match_flag", "arrow_types": ["string", "large_string"], "duckdb_type": "VARCHAR", "normalized_name": "shared_match_flag", "nullable": true, "policy": "Preserve raw values ('Y', 'N', null); no boolean coercion."},
+        {"name": "access_a_ride_flag", "arrow_types": ["string", "large_string"], "duckdb_type": "VARCHAR", "normalized_name": "access_a_ride_flag", "nullable": true, "policy": "Preserve raw values ('Y', 'N', null, space); no boolean coercion."},
+        {"name": "wav_request_flag", "arrow_types": ["string", "large_string"], "duckdb_type": "VARCHAR", "normalized_name": "wav_request_flag", "nullable": true, "policy": "Wheelchair accessible vehicle request flag."},
+        {"name": "wav_match_flag", "arrow_types": ["string", "large_string"], "duckdb_type": "VARCHAR", "normalized_name": "wav_match_flag", "nullable": true, "policy": "Wheelchair accessible vehicle match flag."}
+      ],
+      "absent_columns": {
+        "cbd_congestion_fee": {
+          "normalized_name": "cbd_congestion_fee",
+          "duckdb_type": "DOUBLE",
+          "default_sql": "NULL",
+          "cbd_fee_field_present": false,
+          "policy": "Absent from source Parquet; adapted to NULL with cbd_fee_field_present=false metadata flag, not numeric zero."
+        }
+      },
+      "constraints": [
+        "exact_column_match",
+        "no_unknown_columns",
+        "naive_timestamps_only"
+      ]
+    },
+    "hvfhv_25col_2025onward.v1": {
+      "schema_id": "hvfhv_25col_2025onward.v1",
+      "version": "v1",
+      "format": "parquet",
+      "description": "NYC TLC High Volume For-Hire Vehicle trip observations for months 2025-01 and onward.",
+      "applicable_period_predicate": "period >= '2025-01'",
+      "expected_column_count": 25,
+      "columns": [
+        {"name": "hvfhs_license_num", "arrow_types": ["string", "large_string"], "duckdb_type": "VARCHAR", "normalized_name": "hvfhs_license_num", "nullable": true, "policy": "Preserve null and exact string; no trim or case folding."},
+        {"name": "dispatching_base_num", "arrow_types": ["string", "large_string"], "duckdb_type": "VARCHAR", "normalized_name": "dispatching_base_num", "nullable": true, "policy": "Preserve null and exact string."},
+        {"name": "originating_base_num", "arrow_types": ["string", "large_string"], "duckdb_type": "VARCHAR", "normalized_name": "originating_base_num", "nullable": true, "policy": "Preserve null and exact string."},
+        {"name": "request_datetime", "arrow_types": ["timestamp[us]"], "duckdb_type": "TIMESTAMP", "normalized_name": "request_datetime", "nullable": true, "policy": "Naive timestamp at microsecond precision (no timezone)."},
+        {"name": "on_scene_datetime", "arrow_types": ["timestamp[us]"], "duckdb_type": "TIMESTAMP", "normalized_name": "on_scene_datetime", "nullable": true, "policy": "Naive timestamp at microsecond precision (no timezone)."},
+        {"name": "pickup_datetime", "arrow_types": ["timestamp[us]"], "duckdb_type": "TIMESTAMP", "normalized_name": "pickup_datetime", "nullable": true, "policy": "Naive timestamp at microsecond precision (no timezone). Primary event time."},
+        {"name": "dropoff_datetime", "arrow_types": ["timestamp[us]"], "duckdb_type": "TIMESTAMP", "normalized_name": "dropoff_datetime", "nullable": true, "policy": "Naive timestamp at microsecond precision (no timezone)."},
+        {"name": "PULocationID", "arrow_types": ["int32", "int64"], "duckdb_type": "INTEGER", "normalized_name": "pu_location_id", "nullable": true, "policy": "Pickup location ID; foreign key to zone_reference."},
+        {"name": "DOLocationID", "arrow_types": ["int32", "int64"], "duckdb_type": "INTEGER", "normalized_name": "do_location_id", "nullable": true, "policy": "Dropoff location ID; foreign key to zone_reference."},
+        {"name": "trip_miles", "arrow_types": ["double", "float"], "duckdb_type": "DOUBLE", "normalized_name": "trip_miles", "nullable": true, "policy": "Reported trip miles; negative, zero, and NaN/Inf values preserved."},
+        {"name": "trip_time", "arrow_types": ["int64", "int32"], "duckdb_type": "BIGINT", "normalized_name": "trip_time", "nullable": true, "policy": "Source trip duration in integer seconds."},
+        {"name": "base_passenger_fare", "arrow_types": ["double"], "duckdb_type": "DOUBLE", "normalized_name": "base_passenger_fare", "nullable": true, "policy": "Reported fare; preserve raw floating point values."},
+        {"name": "tolls", "arrow_types": ["double"], "duckdb_type": "DOUBLE", "normalized_name": "tolls", "nullable": true, "policy": "Reported toll amount."},
+        {"name": "bcf", "arrow_types": ["double"], "duckdb_type": "DOUBLE", "normalized_name": "bcf", "nullable": true, "policy": "Black Car Fund surcharge."},
+        {"name": "sales_tax", "arrow_types": ["double"], "duckdb_type": "DOUBLE", "normalized_name": "sales_tax", "nullable": true, "policy": "Reported sales tax."},
+        {"name": "congestion_surcharge", "arrow_types": ["double"], "duckdb_type": "DOUBLE", "normalized_name": "congestion_surcharge", "nullable": true, "policy": "NYS congestion surcharge."},
+        {"name": "airport_fee", "arrow_types": ["double"], "duckdb_type": "DOUBLE", "normalized_name": "airport_fee", "nullable": true, "policy": "Airport access fee."},
+        {"name": "tips", "arrow_types": ["double"], "duckdb_type": "DOUBLE", "normalized_name": "tips", "nullable": true, "policy": "Reported passenger tip."},
+        {"name": "driver_pay", "arrow_types": ["double"], "duckdb_type": "DOUBLE", "normalized_name": "driver_pay", "nullable": true, "policy": "Reported driver pay."},
+        {"name": "shared_request_flag", "arrow_types": ["string", "large_string"], "duckdb_type": "VARCHAR", "normalized_name": "shared_request_flag", "nullable": true, "policy": "Preserve raw values ('Y', 'N', null)."},
+        {"name": "shared_match_flag", "arrow_types": ["string", "large_string"], "duckdb_type": "VARCHAR", "normalized_name": "shared_match_flag", "nullable": true, "policy": "Preserve raw values ('Y', 'N', null)."},
+        {"name": "access_a_ride_flag", "arrow_types": ["string", "large_string"], "duckdb_type": "VARCHAR", "normalized_name": "access_a_ride_flag", "nullable": true, "policy": "Preserve raw values ('Y', 'N', null, space)."},
+        {"name": "wav_request_flag", "arrow_types": ["string", "large_string"], "duckdb_type": "VARCHAR", "normalized_name": "wav_request_flag", "nullable": true, "policy": "Wheelchair accessible vehicle request flag."},
+        {"name": "wav_match_flag", "arrow_types": ["string", "large_string"], "duckdb_type": "VARCHAR", "normalized_name": "wav_match_flag", "nullable": true, "policy": "Wheelchair accessible vehicle match flag."},
+        {"name": "cbd_congestion_fee", "arrow_types": ["double"], "duckdb_type": "DOUBLE", "normalized_name": "cbd_congestion_fee", "nullable": true, "policy": "CBD Congestion Fee (introduced 2025-01); cbd_fee_field_present=true."}
+      ],
+      "absent_columns": {},
+      "constraints": [
+        "exact_column_match",
+        "no_unknown_columns",
+        "naive_timestamps_only"
+      ]
+    },
+    "taxi_zone_lookup.v1": {
+      "schema_id": "taxi_zone_lookup.v1",
+      "version": "v1",
+      "format": "csv",
+      "description": "NYC TLC Taxi Zone Lookup reference table.",
+      "expected_column_count": 4,
+      "columns": [
+        {"name": "LocationID", "csv_header": "LocationID", "duckdb_type": "INTEGER", "nullable": false, "unique": true, "policy": "Unique non-null integer LocationID. Key dimension index."},
+        {"name": "Borough", "csv_header": "Borough", "duckdb_type": "VARCHAR", "nullable": true, "policy": "Borough name; nonstandard boroughs preserved ('EWR', 'Unknown', 'N/A')."},
+        {"name": "Zone", "csv_header": "Zone", "duckdb_type": "VARCHAR", "nullable": true, "policy": "Zone name string."},
+        {"name": "service_zone", "csv_header": "service_zone", "duckdb_type": "VARCHAR", "nullable": true, "policy": "Service zone classification."}
+      ],
+      "mandatory_sentinel_ids": [1, 264, 265],
+      "constraints": [
+        "unique_location_id",
+        "non_null_location_id",
+        "preserve_sentinel_ids"
+      ]
+    }
+  }
+}
