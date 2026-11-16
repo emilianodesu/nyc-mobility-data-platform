@@ -14,6 +14,7 @@ Tests:
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -21,6 +22,9 @@ import sqlite3
 import tempfile
 import tracemalloc
 from typing import Any
+
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 from hvfhv.config import SystemConfig
 from hvfhv.contracts.identity import compute_revision_id
@@ -106,10 +110,46 @@ class MockClient:
         pass
 
 
-def make_valid_synthetic_parquet(num_records: int = 100) -> bytes:
-    """Return synthetic valid Parquet byte structure."""
-    payload = b"HVFHV_DATA_ROW_" * num_records
-    return b"PAR1" + payload + b"\x00\x00\x00\x00" + b"PAR1"
+def make_valid_synthetic_parquet(num_records: int = 100, is_2025: bool = False) -> bytes:
+    """Return a genuine valid 24-column or 25-column PyArrow Parquet byte structure."""
+    fields = [
+        ("hvfhs_license_num", pa.string()),
+        ("dispatching_base_num", pa.string()),
+        ("originating_base_num", pa.string()),
+        ("request_datetime", pa.timestamp("us")),
+        ("on_scene_datetime", pa.timestamp("us")),
+        ("pickup_datetime", pa.timestamp("us")),
+        ("dropoff_datetime", pa.timestamp("us")),
+        ("PULocationID", pa.int64()),
+        ("DOLocationID", pa.int64()),
+        ("trip_miles", pa.float64()),
+        ("trip_time", pa.int64()),
+        ("base_passenger_fare", pa.float64()),
+        ("tolls", pa.float64()),
+        ("bcf", pa.float64()),
+        ("sales_tax", pa.float64()),
+        ("congestion_surcharge", pa.float64()),
+        ("airport_fee", pa.float64()),
+        ("tips", pa.float64()),
+        ("driver_pay", pa.float64()),
+        ("shared_request_flag", pa.string()),
+        ("shared_match_flag", pa.string()),
+        ("access_a_ride_flag", pa.string()),
+        ("wav_request_flag", pa.string()),
+        ("wav_match_flag", pa.string()),
+    ]
+    if is_2025:
+        fields.append(("cbd_congestion_fee", pa.float64()))
+
+    schema = pa.schema(fields)
+    data = {
+        name: [None] * num_records if t != pa.int64() else [1] * num_records
+        for name, t in fields
+    }
+    table = pa.Table.from_pydict(data, schema=schema)
+    buf = io.BytesIO()
+    pq.write_table(table, buf)
+    return buf.getvalue()
 
 
 # ==============================================================================
@@ -236,22 +276,8 @@ def test_http_404_does_not_halt_discovery():
 # ==============================================================================
 def test_bounded_streaming_memory_large_payload():
     """Verify memory remains bounded (O(1) relative to payload) when streaming large Parquet."""
-    payload_size = 50 * 1024 * 1024  # 50 MiB simulated stream
     chunk_size = 65536  # 64 KiB chunks
-    num_chunks = payload_size // chunk_size
-
-    def large_payload_generator():
-        header = b"PAR1"
-        yield header
-        remaining = payload_size - 8
-        chunk_data = b"X" * chunk_size
-        while remaining > chunk_size:
-            yield chunk_data
-            remaining -= chunk_size
-        if remaining > 0:
-            yield b"X" * remaining
-        footer = b"\x00\x00\x00\x00PAR1"
-        yield footer
+    num_rows = 150_000  # Multi-batch (> 2 * 65536 rows) genuine Parquet payload
 
     url = "https://d37ci6vzurychx.cloudfront.net/trip-data/fhvhv_tripdata_2025-01.parquet"
 
@@ -263,11 +289,59 @@ def test_bounded_streaming_memory_large_payload():
         reg = Registry(db_path=config.control_dir / "registry.sqlite", data_root=data_root, auto_migrate=True)
         conn = reg.get_connection()
 
+        # Pre-build a genuine multi-row-group 24-column Parquet file on disk before starting tracemalloc
+        large_source_file = root / "upstream_large.parquet"
+        fields = [
+            ("hvfhs_license_num", pa.string()),
+            ("dispatching_base_num", pa.string()),
+            ("originating_base_num", pa.string()),
+            ("request_datetime", pa.timestamp("us")),
+            ("on_scene_datetime", pa.timestamp("us")),
+            ("pickup_datetime", pa.timestamp("us")),
+            ("dropoff_datetime", pa.timestamp("us")),
+            ("PULocationID", pa.int64()),
+            ("DOLocationID", pa.int64()),
+            ("trip_miles", pa.float64()),
+            ("trip_time", pa.int64()),
+            ("base_passenger_fare", pa.float64()),
+            ("tolls", pa.float64()),
+            ("bcf", pa.float64()),
+            ("sales_tax", pa.float64()),
+            ("congestion_surcharge", pa.float64()),
+            ("airport_fee", pa.float64()),
+            ("tips", pa.float64()),
+            ("driver_pay", pa.float64()),
+            ("shared_request_flag", pa.string()),
+            ("shared_match_flag", pa.string()),
+            ("access_a_ride_flag", pa.string()),
+            ("wav_request_flag", pa.string()),
+            ("wav_match_flag", pa.string()),
+        ]
+        schema = pa.schema(fields)
+        rg_rows = 50_000
+        pad_str = "HV0003_" + ("X" * 340)
+        rg_data = {
+            name: ([pad_str] * rg_rows if name == "hvfhs_license_num" else ([1] * rg_rows if t == pa.int64() else [None] * rg_rows))
+            for name, t in fields
+        }
+        rg_table = pa.Table.from_pydict(rg_data, schema=schema)
+        with pq.ParquetWriter(large_source_file, schema, compression="NONE") as writer:
+            for _ in range(num_rows // rg_rows):
+                writer.write_table(rg_table, row_group_size=25_000)
+        del rg_table, rg_data
+
+        payload_size = large_source_file.stat().st_size
+
+        def large_payload_generator():
+            with open(large_source_file, "rb") as src_f:
+                while chunk := src_f.read(chunk_size):
+                    yield chunk
+
         try:
             def handler(req):
                 return MockResponse(
                     200,
-                    headers={"Content-Length": str(payload_size + 4)},
+                    headers={"Content-Length": str(payload_size)},
                     request=req,
                     generator_override=large_payload_generator,
                 )
@@ -283,23 +357,24 @@ def test_bounded_streaming_memory_large_payload():
             current_mem, peak_mem = tracemalloc.get_traced_memory()
             tracemalloc.stop()
 
-            # The entire payload is ~50 MiB.
+            # The entire payload is ~50 MiB across 150,000 rows and 6 row groups.
             # Bounded streaming invariant: Peak memory during streaming MUST be << payload_size.
-            # Typically peak memory overhead for streaming + hashing + disk write is < 5 MiB.
             assert peak_mem < 10 * 1024 * 1024, (
-                f"Peak memory {peak_mem / (1024*1024):.2f} MiB exceeded bounded threshold for 50 MiB stream!"
+                f"Peak memory {peak_mem / (1024*1024):.2f} MiB exceeded bounded threshold for {payload_size / (1024*1024):.2f} MiB stream!"
             )
-            assert prov["completed_bytes"] == payload_size + 4
+            assert prov["completed_bytes"] == payload_size
+            assert prov["footer_row_count"] == num_rows
+            assert prov["decoded_row_count"] == num_rows
 
             # Verify file on disk matches byte count
             raw_file = data_root / prov["relative_path"]
             assert raw_file.exists()
-            assert raw_file.stat().st_size == payload_size + 4
+            assert raw_file.stat().st_size == payload_size
 
         finally:
             conn.close()
 
-    print(f"    [PASS] test_bounded_streaming_memory_large_payload (peak memory: {peak_mem / 1024:.1f} KiB for 50 MiB payload)")
+    print(f"    [PASS] test_bounded_streaming_memory_large_payload (peak memory: {peak_mem / 1024:.1f} KiB for {payload_size / (1024*1024):.1f} MiB payload)")
 
 
 # ==============================================================================

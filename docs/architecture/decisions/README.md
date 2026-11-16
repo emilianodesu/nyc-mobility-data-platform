@@ -7,3 +7,4 @@ Status for every record: recorded design choice, implementation pending; no sepa
 - [0003: Select immutable analytical releases transactionally](0003-immutable-releases-and-selection.md)
 - [0004: Keep quality findings separate from metric eligibility](0004-quality-and-recorded-intervals.md)
 - [0005: Use Dagster OSS and a bounded local read-only consumer](0005-orchestration-and-consumer.md)
+- [0006: Amend retained analytical release policy to Option A (current plus one prior verified release)](0006-amend-release-retention-to-option-a.md)

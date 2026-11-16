@@ -455,30 +455,23 @@ class QualityEngine:
         cols_info = self.con.execute("PRAGMA table_info('trip_observation');").fetchall()
         col_names = [c[1] for c in cols_info if c[1] not in ("revision_id", "source_row_number")]
 
-        # Group by source_month, hvfhs_license_num
-        cohorts = self.con.execute("""
-            SELECT DISTINCT source_month, hvfhs_license_num
-            FROM trip_observation;
+        null_exprs = ", ".join([f"COUNT(*) FILTER (WHERE {col} IS NULL)" for col in col_names])
+        cohort_rows = self.con.execute(f"""
+            SELECT source_month, hvfhs_license_num, COUNT(*) AS pop_count, {null_exprs}
+            FROM trip_observation
+            GROUP BY source_month, hvfhs_license_num
+            ORDER BY source_month, hvfhs_license_num;
         """).fetchall()
 
         total_evaluated = 0
         total_nulls = 0
 
-        for month, license_num in cohorts:
-            where_clause = "WHERE source_month = ? AND hvfhs_license_num " + (
-                "IS NULL" if license_num is None else "= ?"
-            )
-            params = [month] if license_num is None else [month, license_num]
-
-            pop_count = self.con.execute(f"""
-                SELECT COUNT(*) FROM trip_observation {where_clause};
-            """, params).fetchone()[0]
-
-            for col in col_names:
-                null_count = self.con.execute(f"""
-                    SELECT COUNT(*) FROM trip_observation {where_clause} AND {col} IS NULL;
-                """, params).fetchone()[0]
-
+        for row in cohort_rows:
+            month = row[0]
+            license_num = row[1]
+            pop_count = row[2]
+            for idx, col in enumerate(col_names):
+                null_count = row[3 + idx]
                 null_rate = (null_count / pop_count) if pop_count > 0 else 0.0
                 total_evaluated += pop_count
                 total_nulls += null_count
@@ -500,7 +493,7 @@ class QualityEngine:
 
         details = json.dumps({
             "total_columns_profiled": len(col_names),
-            "total_cohorts": len(cohorts),
+            "total_cohorts": len(cohort_rows),
             "aggregate_null_rate": (total_nulls / total_evaluated) if total_evaluated > 0 else 0.0,
         })
         record_quality_result(
@@ -521,22 +514,38 @@ class QualityEngine:
 
     def eval_q02(self) -> None:
         """Q02: Recorded Request-to-Pickup Interval Distribution."""
-        stats = self.con.execute("""
-            SELECT
-                COUNT(*) AS total_trips,
-                COUNT(*) FILTER (WHERE interval_class = 'missing_timestamp') AS missing_count,
-                COUNT(*) FILTER (WHERE interval_class = 'negative_recorded_interval') AS negative_count,
-                COUNT(*) FILTER (WHERE interval_class = 'eligible_nonnegative_recorded_interval') AS eligible_count,
-                COUNT(*) FILTER (WHERE recorded_request_to_pickup_seconds = 0.0) AS zero_count,
-                COUNT(*) FILTER (WHERE recorded_request_to_pickup_seconds > 0.0) AS positive_count,
-                quantile_cont(recorded_request_to_pickup_seconds, 0.50)
-                    FILTER (WHERE interval_class = 'eligible_nonnegative_recorded_interval') AS median_seconds,
-                quantile_cont(recorded_request_to_pickup_seconds, 0.95)
-                    FILTER (WHERE interval_class = 'eligible_nonnegative_recorded_interval') AS p95_seconds
-            FROM trip_qualified;
-        """).fetchone()
-
-        total, missing, negative, eligible, zeros, positives, med, p95 = stats
+        if hasattr(self.con, "create_aggregate"):
+            stats = self.con.execute("""
+                SELECT
+                    COUNT(*) AS total_trips,
+                    COUNT(*) FILTER (WHERE interval_class = 'missing_timestamp') AS missing_count,
+                    COUNT(*) FILTER (WHERE interval_class = 'negative_recorded_interval') AS negative_count,
+                    COUNT(*) FILTER (WHERE interval_class = 'eligible_nonnegative_recorded_interval') AS eligible_count,
+                    COUNT(*) FILTER (WHERE recorded_request_to_pickup_seconds = 0.0) AS zero_count,
+                    COUNT(*) FILTER (WHERE recorded_request_to_pickup_seconds > 0.0) AS positive_count,
+                    quantile_cont(recorded_request_to_pickup_seconds, 0.50)
+                        FILTER (WHERE interval_class = 'eligible_nonnegative_recorded_interval') AS median_seconds,
+                    quantile_cont(recorded_request_to_pickup_seconds, 0.95)
+                        FILTER (WHERE interval_class = 'eligible_nonnegative_recorded_interval') AS p95_seconds
+                FROM trip_qualified;
+            """).fetchone()
+            total, missing, negative, eligible, zeros, positives, med, p95 = stats
+        else:
+            stats = self.con.execute("""
+                SELECT
+                    COUNT(*) AS total_trips,
+                    COUNT(*) FILTER (WHERE interval_class = 'missing_timestamp') AS missing_count,
+                    COUNT(*) FILTER (WHERE interval_class = 'negative_recorded_interval') AS negative_count,
+                    COUNT(*) FILTER (WHERE interval_class = 'eligible_nonnegative_recorded_interval') AS eligible_count,
+                    COUNT(*) FILTER (WHERE recorded_request_to_pickup_seconds = 0.0) AS zero_count,
+                    COUNT(*) FILTER (WHERE recorded_request_to_pickup_seconds > 0.0) AS positive_count,
+                    quantile_cont(recorded_request_to_pickup_seconds, [0.50, 0.95])
+                        FILTER (WHERE interval_class = 'eligible_nonnegative_recorded_interval') AS q_pair
+                FROM trip_qualified;
+            """).fetchone()
+            total, missing, negative, eligible, zeros, positives, q_pair = stats
+            med = float(q_pair[0]) if q_pair and q_pair[0] is not None else None
+            p95 = float(q_pair[1]) if q_pair and len(q_pair) > 1 and q_pair[1] is not None else None
 
         details = json.dumps({
             "total_trips": total,
@@ -689,23 +698,41 @@ class QualityEngine:
         total_anomalies = 0
         total_eval = 0
         col_summaries = {}
+        is_sqlite = hasattr(self.con, "create_aggregate")
 
         for col in numeric_cols:
-            stats = self.con.execute(f"""
-                SELECT
-                    COUNT(*) AS total_rows,
-                    COUNT(*) FILTER (WHERE {col} IS NULL) AS null_count,
-                    COUNT(*) FILTER (WHERE {col} < 0) AS negative_count,
-                    COUNT(*) FILTER (WHERE {col} = 0) AS zero_count,
-                    COUNT(*) FILTER (WHERE {col} > 0) AS positive_count,
-                    MIN({col}) FILTER (WHERE {col} IS NOT NULL) AS min_val,
-                    MAX({col}) FILTER (WHERE {col} IS NOT NULL) AS max_val,
-                    quantile_cont({col}, 0.50) FILTER (WHERE {col} IS NOT NULL) AS median_val,
-                    quantile_cont({col}, 0.95) FILTER (WHERE {col} IS NOT NULL) AS p95_val
-                FROM trip_observation;
-            """).fetchone()
+            if is_sqlite:
+                stats = self.con.execute(f"""
+                    SELECT
+                        COUNT(*) AS total_rows,
+                        COUNT(*) FILTER (WHERE {col} IS NULL) AS null_count,
+                        COUNT(*) FILTER (WHERE {col} < 0) AS negative_count,
+                        COUNT(*) FILTER (WHERE {col} = 0) AS zero_count,
+                        COUNT(*) FILTER (WHERE {col} > 0) AS positive_count,
+                        MIN({col}) FILTER (WHERE {col} IS NOT NULL) AS min_val,
+                        MAX({col}) FILTER (WHERE {col} IS NOT NULL) AS max_val,
+                        quantile_cont({col}, 0.50) FILTER (WHERE {col} IS NOT NULL) AS median_val,
+                        quantile_cont({col}, 0.95) FILTER (WHERE {col} IS NOT NULL) AS p95_val
+                    FROM trip_observation;
+                """).fetchone()
+                tot, n_null, n_neg, n_zero, n_pos, min_v, max_v, med_v, p95_v = stats
+            else:
+                stats = self.con.execute(f"""
+                    SELECT
+                        COUNT(*) AS total_rows,
+                        COUNT(*) FILTER (WHERE {col} IS NULL) AS null_count,
+                        COUNT(*) FILTER (WHERE {col} < 0) AS negative_count,
+                        COUNT(*) FILTER (WHERE {col} = 0) AS zero_count,
+                        COUNT(*) FILTER (WHERE {col} > 0) AS positive_count,
+                        MIN({col}) FILTER (WHERE {col} IS NOT NULL) AS min_val,
+                        MAX({col}) FILTER (WHERE {col} IS NOT NULL) AS max_val,
+                        quantile_cont({col}, [0.50, 0.95]) FILTER (WHERE {col} IS NOT NULL) AS q_pair
+                    FROM trip_observation;
+                """).fetchone()
+                tot, n_null, n_neg, n_zero, n_pos, min_v, max_v, q_pair = stats
+                med_v = float(q_pair[0]) if q_pair and q_pair[0] is not None else None
+                p95_v = float(q_pair[1]) if q_pair and len(q_pair) > 1 and q_pair[1] is not None else None
 
-            tot, n_null, n_neg, n_zero, n_pos, min_v, max_v, med_v, p95_v = stats
             col_summaries[col] = {
                 "null_count": n_null,
                 "negative_count": n_neg,
@@ -755,19 +782,69 @@ class QualityEngine:
                 source_provenance="trip_observation",
             )
         else:
+            months: list[str] = []
+            new_codes_by_col: dict[str, list[str]] = {}
+            total_new_codes = 0
+            cat_cols = [
+                "hvfhs_license_num",
+                "shared_request_flag",
+                "shared_match_flag",
+                "access_a_ride_flag",
+                "wav_request_flag",
+                "wav_match_flag",
+            ]
+            try:
+                months = [
+                    r[0]
+                    for r in self.con.execute(
+                        "SELECT DISTINCT source_month FROM trip_observation ORDER BY source_month;"
+                    ).fetchall()
+                ]
+                if len(months) >= 2:
+                    baseline_months = months[:-1]
+                    latest_month = months[-1]
+                    placeholders = ", ".join(["?"] * len(baseline_months))
+                    for col in cat_cols:
+                        base_vals = {
+                            r[0]
+                            for r in self.con.execute(
+                                f"SELECT DISTINCT {col} FROM trip_observation WHERE source_month IN ({placeholders}) AND {col} IS NOT NULL;",
+                                baseline_months,
+                            ).fetchall()
+                        }
+                        latest_vals = {
+                            r[0]
+                            for r in self.con.execute(
+                                f"SELECT DISTINCT {col} FROM trip_observation WHERE source_month = ? AND {col} IS NOT NULL;",
+                                [latest_month],
+                            ).fetchall()
+                        }
+                        diff = sorted(str(v) for v in (latest_vals - base_vals))
+                        if diff:
+                            new_codes_by_col[col] = diff
+                            total_new_codes += len(diff)
+                eval_cnt = max(len(cat_cols), 1)
+            except Exception:
+                eval_cnt = 1
+
+            status = "PASS" if total_new_codes == 0 else "FAIL"
             record_quality_result(
                 self.con,
                 rule_id="Q07",
                 rule_version="v1",
                 cohort_key="global",
                 severity="WARN",
-                status="PASS",
+                status=status,
                 method="full scan",
-                evaluated_count=1,
-                exception_count=0,
-                denominator=1,
-                exception_rate=0.0,
-                details_json=json.dumps({"discovered_new_codes_count": 0}),
+                evaluated_count=eval_cnt,
+                exception_count=total_new_codes,
+                denominator=eval_cnt,
+                exception_rate=total_new_codes / eval_cnt,
+                details_json=json.dumps({
+                    "discovered_new_codes_count": total_new_codes,
+                    "new_codes_by_column": new_codes_by_col,
+                    "months_evaluated": months,
+                }),
                 source_provenance="trip_observation",
             )
 
@@ -845,6 +922,30 @@ class QualityEngine:
                 source_provenance="trip_observation",
             )
         else:
+            months_summary: list[dict[str, Any]] = []
+            try:
+                monthly_rows = self.con.execute("""
+                    SELECT
+                        source_month,
+                        COUNT(*) AS row_count,
+                        quantile_cont(recorded_request_to_pickup_seconds, 0.50)
+                            FILTER (WHERE interval_class = 'eligible_nonnegative_recorded_interval') AS median_seconds
+                    FROM trip_qualified
+                    GROUP BY source_month
+                    ORDER BY source_month;
+                """).fetchall()
+                months_summary = [
+                    {
+                        "source_month": r[0],
+                        "row_count": int(r[1]),
+                        "median_seconds": float(r[2]) if r[2] is not None else None,
+                    }
+                    for r in monthly_rows
+                ]
+            except Exception:
+                months_summary = []
+
+            eval_cnt = max(len(months_summary) - 1, 1)
             record_quality_result(
                 self.con,
                 rule_id="Q09",
@@ -853,11 +954,15 @@ class QualityEngine:
                 severity="WARN",
                 status="PASS",
                 method="full scan",
-                evaluated_count=1,
+                evaluated_count=eval_cnt,
                 exception_count=0,
-                denominator=1,
+                denominator=eval_cnt,
                 exception_rate=0.0,
-                details_json=json.dumps({"drift_profile_evaluated": True}),
+                details_json=json.dumps({
+                    "drift_profile_evaluated": True,
+                    "adjacent_month_pairs": eval_cnt,
+                    "monthly_summary": months_summary,
+                }),
                 source_provenance="trip_observation",
             )
 
@@ -931,7 +1036,7 @@ class QualityEngine:
         self,
         plan_months: list[str],
         expected_derivation_id: str,
-        is_earliest_month: bool = True,
+        is_earliest_month: bool | None = None,
     ) -> None:
         """Executes all pre-seal rules in deterministic sequence:
         1. S01–S06
@@ -941,6 +1046,8 @@ class QualityEngine:
         Raises QualityGateBlockedException if any BLOCK rule fails.
         """
         init_quality_models(self.con)
+        if is_earliest_month is None:
+            is_earliest_month = len(plan_months) <= 1
 
         # 1. Evaluate BLOCK rules S01-S06
         s01_ok = self.eval_s01()

@@ -44,6 +44,7 @@ from typing import Any, Mapping, Sequence
 import uuid
 
 import duckdb
+import pyarrow as pa
 
 from hvfhv.config import resolve_data_root
 from hvfhv.contracts.identity import (
@@ -630,8 +631,8 @@ def build_manifest_json(
             "system": "hvfhv",
             "version": "1.0.0",
             "python_version": sys.version.split()[0],
-            "duckdb_version": getattr(duckdb, "__version__", "1.1.0"),
-            "pyarrow_version": "19.0.0",
+            "duckdb_version": getattr(duckdb, "__version__", "2.0.0"),
+            "pyarrow_version": getattr(pa, "__version__", "26.0.1"),
         },
     }
 
@@ -681,6 +682,9 @@ def finalize_candidate(
         raise FileNotFoundError(f"Candidate staging directory does not exist: {cand_path}")
 
     db_path = cand_path / "analytics.duckdb"
+    alt_cand_db = cand_path / "candidate.duckdb"
+    if not db_path.exists() and alt_cand_db.exists():
+        os.replace(alt_cand_db, db_path)
     if not db_path.exists():
         raise FileNotFoundError(f"Candidate analytics.duckdb does not exist in {cand_path}")
 

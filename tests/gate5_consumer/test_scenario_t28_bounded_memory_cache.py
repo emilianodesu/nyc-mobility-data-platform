@@ -50,7 +50,7 @@ def test_t28_lru_cache_bounded_at_32_entries():
 
 
 def test_t28_result_set_bounded_by_max_rows():
-    """Scenario T28: Large result sets are capped at MAX_CACHE_ROWS."""
+    """Scenario T28: Large result sets are capped at MAX_CACHE_ROWS and excluded from cache."""
     with tempfile.TemporaryDirectory() as tmpdir:
         root = Path(tmpdir)
         registry, rel_id, rel_dir = setup_test_published_release(root)
@@ -61,6 +61,13 @@ def test_t28_result_set_bounded_by_max_rows():
         rows = reader.execute_query("SELECT range AS val FROM range(15000);", query_kind="large_result")
         assert len(rows) == reader.MAX_CACHE_ROWS
         assert len(rows) == 10000
+
+        # Oversized result must NOT be stored in the LRU cache
+        stats = reader.get_cache_stats()
+        assert stats["entry_count"] == 0
+        assert stats["oversized_uncached_count"] == 1
+        assert stats["last_query_meta"]["oversized_uncached"] is True
+        assert stats["last_query_meta"]["narrowing_guidance"] is not None
 
 
 def test_t28_memory_rss_remains_bounded():

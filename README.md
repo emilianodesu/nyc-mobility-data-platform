@@ -53,23 +53,30 @@ Built for local execution on macOS (Apple Silicon / APFS) and POSIX systems with
    $$\text{total} = \text{eligible\_nonnegative} + \text{negative\_recorded\_interval} + \text{missing\_timestamp}$$
 4. **Type 7 Continuous Quantiles & Non-Averaging**: Median ($p50$) and 95th percentile ($p95$) are evaluated directly over eligible trips using continuous linear interpolation (`quantile_cont`). Daily quantiles are never averaged across dates or zones.
 5. **Atomic Publication & Recovery**: Releases are published via atomic compare-and-swap (CAS) on generation counters. Process kills during staging, rename, or post-commit recover idempotently without duplicate generations or partial database exposure.
-6. **Option A Retention Policy**: The platform maintains the current analytical release plus exactly 1 prior analytical release (2 analytical releases total). Older databases are safely unlinked to reclaim storage while audit manifests (`manifest.json`) and validation receipts (`validation.json`) are preserved permanently. Total storage is strictly bounded within $\le 80.0\text{ GiB}$ with $\sim 22.6\text{ GiB}$ safe headroom.
+6. **Option A Retention Policy ([ADR 0006](docs/architecture/decisions/0006-amend-release-retention-to-option-a.md))**: The platform maintains the current analytical release plus exactly 1 prior analytical release (2 analytical releases total). Older databases are safely unlinked to reclaim storage while audit manifests (`manifest.json`) and validation receipts (`validation.json`) are preserved permanently. Total storage is strictly bounded within $\le 80.0\text{ GiB}$ (`20.75 GiB` active 2-month footprint with `59.25 GiB` headroom; $\sim 22.6\text{ GiB}$ safe headroom at full 12-month scale).
 
 ---
 
 ## 2. Platform Verification & Certification Status
 
-All 7 staged gates (`G0` through `G6`), 26 architectural requirements (`R01`–`R26`), and 29 verification scenarios (`T01`–`T29`) have been fully implemented, tested, and certified with genuine automated execution evidence.
+All 7 staged gates (`G0` through `G6`), 26 architectural requirements (`R01`–`R26`), and 29 verification scenarios (`T01`–`T29`) have been fully implemented, tested, and certified with genuine automated execution evidence (`229/229` `pytest` tests passing and `108/108` gate runner assertions passing) plus real official NYC TLC multi-month dataset execution (`41,474,517` trips across `2024-12` and `2025-01`).
 
 | Gate | Milestone | Acceptance Criteria | Tests Executed | Status |
 | :--- | :--- | :--- | :--- | :--- |
 | **G0** | Compatibility & Dependency Lock | Python 3.14, SQLite pragmas, POSIX locking, DuckDB 2.0.0 & PyArrow 26.0.1 | 28 / 28 PASS | **CERTIFIED PASS** |
 | **G1** | Trustworthy Acquisition & Control | Bounded HTTP streaming, raw provenance, RFC 8785 canonical hashes, 15-table SQLite control plane | 31 / 31 PASS | **CERTIFIED PASS** |
-| **G2** | Monthly Vertical Slice & Quality | Real December 2024 TLC Parquet (~21M rows), 7 pre-seal rules S01–S07, profiles Q01–Q09, 0-byte post-checkpoint WAL | 18 / 18 PASS | **CERTIFIED PASS** |
+| **G2** | Monthly Vertical Slice & Quality | Real Dec 2024 (`21,068,851` rows) & Jan 2025 (`20,405,666` rows) TLC Parquet, S01–S07, Q01–Q09, 0-byte post-checkpoint WAL | 18 / 18 PASS | **CERTIFIED PASS** |
 | **G3** | Publication Safety & Durability | Candidate finalization, Rule S08 digest check, atomic CAS publication, crash recovery, SQLite online backup | 14 / 14 PASS | **CERTIFIED PASS** |
-| **G4** | Scale & Option A Retention | Incremental vs full rebuild equivalence, writer lock contention, 80 GiB budget preflight, Option A retention enforcement | 5 / 5 PASS | **CERTIFIED PASS** |
+| **G4** | Scale & Option A Retention | Incremental vs full rebuild equivalence, writer lock contention, 80 GiB budget preflight, Option A retention ([ADR 0006](docs/architecture/decisions/0006-amend-release-retention-to-option-a.md)) | 5 / 5 PASS | **CERTIFIED PASS** |
 | **G5** | Consumer & Operations | Streamlit Reliability & Intervals views, out-of-cache eligibility, query.lock, bounded LRU cache, Dagster asset checks & gaps scan | 12 / 12 PASS | **CERTIFIED PASS** |
-| **G6** | Portfolio Evidence & Walkthrough | Independent requirement audit (R01–R26), execution log finalization, end-to-end regression across all gates | 108 / 108 PASS | **CERTIFIED PASS** |
+| **G6** | Portfolio Evidence & Walkthrough | Independent requirement audit (`R01`–`R26`), real 2-month NYC TLC execution (`41,474,517` rows), full `pytest` suite (`229/229` PASS) | 229 / 229 PASS | **CERTIFIED PASS** |
+
+### Real Official NYC TLC Dataset Execution Summary (`.data/real_tlc_execution_receipt.json`)
+- **`tlc/taxi_zones` (`taxi_zone_lookup.csv`)**: `265` rows, `12,331` bytes, SHA-256 `1a99e105092230f8620f301edcca7f80d3080642ff404d28ed957d3fa222c8ed`
+- **`tlc/hvfhv/2024-12` (`fhvhv_tripdata_2024-12.parquet`)**: `21,068,851` rows, `507,534,115` bytes (`hvfhv_24col_pre2025.v1`), SHA-256 `dcf0885722bc76ab7b5f22a23b784513caf7e7c2b23381ed854610c436c48887`
+- **`tlc/hvfhv/2025-01` (`fhvhv_tripdata_2025-01.parquet`)**: `20,405,666` rows, `491,076,642` bytes (`hvfhv_25col_2025onward.v1`), SHA-256 `fcdef276f4e9887f2beab30590165cdea74caef50a1313d71fa01ff6afacca3a`
+- **Release 1 (`rel_2024_12_3f8bf865`, Generation 1)**: `21,068,851` trips (`20,817,586` eligible, `251,265` negative, `0` missing; `p50 = 268.0s`, `p95 = 716.0s`; DuckDB size `992.76 MiB`, build wall time `20.61s`, peak RSS `6,227.20 MB`).
+- **Release 2 (`rel_2024_12_2025_01_f2d153b3`, Generation 2)**: `41,474,517` trips across `2024-12` and `2025-01` (`41,023,464` eligible, `451,053` negative, `0` missing; `p50 = 249.0s`, `p95 = 666.0s`; DuckDB size `1,957.76 MiB`, build wall time `32.63s`, peak RSS `7,634.23 MB`; `cbd_congestion_fee` `NULL` on all `21,068,851` `2024-12` rows and populated on all `20,405,666` `2025-01` rows with `14,105,454` zero and `6,300,212` positive up to `$3.00`).
 
 ---
 
@@ -122,10 +129,13 @@ All 7 staged gates (`G0` through `G6`), 26 architectural requirements (`R01`–`
 ### Environment Setup
 The platform requires Python 3.11+ (verified on CPython 3.14.3 macOS Apple Silicon).
 ```bash
+# Run unified pytest suite across all gates and adversarial challenger suites (229 tests)
+PYTHONPATH=src:. .venv/bin/pytest -q
+
 # Set Python path to include source tree
 export PYTHONPATH=src
 
-# Run complete system regression across all gates (108 tests)
+# Run complete system regression across individual gate runners (108 tests)
 .venv/bin/python3 tests/gate0_compatibility/run_gate0_tests.py
 .venv/bin/python3 tests/gate1_acquisition/run_gate1_tests.py
 .venv/bin/python3 tests/gate2_monthly_slice/run_gate2_tests.py

@@ -83,10 +83,17 @@ def main():
         meta = summary.get("metadata", {})
 
         col1, col2, col3, col4 = st.columns(4)
-        col1.metric("Release ID", meta.get("release_id", reader.release_id)[:16] + "...")
-        col2.metric("Derivation ID", meta.get("derivation_id", "N/A")[:16] + "...")
-        col3.metric("Finalized (UTC)", meta.get("finalized_at_utc", "N/A"))
-        col4.metric("DuckDB Version", meta.get("duckdb_version", "N/A"))
+        col1.metric("Release ID", str(meta.get("release_id", reader.release_id))[:16] + "...")
+        col2.metric("Derivation ID", str(meta.get("derivation_id", "N/A"))[:16] + "...")
+        col3.metric("Built / Finalized (UTC)", str(meta.get("built_at_utc") or meta.get("finalized_at_utc") or "N/A"))
+        col4.metric("Model Schema Version", str(meta.get("model_schema_version", "v1")))
+
+        st.subheader("Source Contributions")
+        contribs = summary.get("source_contributions", [])
+        if contribs:
+            st.dataframe(contribs, use_container_width=True)
+        else:
+            st.info("No source contributions available in release.")
 
         st.subheader("Source Month Coverage")
         st.caption("Explicit representation of months; absent source months have NULL row counts (never 0).")
@@ -96,15 +103,18 @@ def main():
         else:
             st.info("No coverage records available in release.")
 
-        st.subheader("Pre-Seal Quality Rules (S01–S08)")
-        st.caption("Blocking quality invariants evaluated prior to publication.")
-        rules = summary.get("quality_rules", [])
+        st.subheader("Quality Rules & Post-Seal S08 Verification")
+        st.caption("Pre-seal rules (S01–S07, Q01–Q09) and post-seal S08 attestation.")
+        rules = list(summary.get("quality_rules", []))
+        s08 = summary.get("s08_verification")
+        if s08:
+            st.success(f"Post-Seal S08 Verified at {s08.get('verified_at_utc')} (Verification ID: {s08.get('verification_id')})")
         if rules:
             st.dataframe(rules, use_container_width=True)
         else:
             st.info("No quality rules recorded.")
 
-        st.subheader("Semantic Column Profiles (Q01–Q09)")
+        st.subheader("Full-Scan Column Profiles")
         profiles = summary.get("column_profiles", [])
         if profiles:
             st.dataframe(profiles, use_container_width=True)
@@ -152,11 +162,18 @@ def main():
         k4.metric("Negative Recorded Intervals", f"{denoms.get('negative_count', 0):,}")
 
         # Quantile KPI cards
-        q1, q2 = st.columns(2)
+        q1, q2, q3 = st.columns(3)
         med = denoms.get("median_seconds")
         p95 = denoms.get("p95_seconds")
+        elig_frac = denoms.get("eligible_fraction", 0.0)
         q1.metric("Exact Median Interval (p50)", f"{med:.2f} s" if med is not None else "N/A")
         q2.metric("Exact 95th Percentile Interval (p95)", f"{p95:.2f} s" if p95 is not None else "N/A")
+        q3.metric("Eligible Fraction", f"{elig_frac * 100.0:.2f}%" if elig_frac is not None else "N/A")
+
+        st.subheader("Daily Aggregate Breakdown by Pickup Location & License")
+        breakdown = result.get("daily_breakdown", [])
+        if breakdown:
+            st.dataframe(breakdown, use_container_width=True)
 
         st.subheader("Sample Trip Observations")
         rows = result.get("sample_rows", [])

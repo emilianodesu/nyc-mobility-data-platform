@@ -40,6 +40,7 @@ from hvfhv.contracts.identity import (
     canonical_json_bytes,
     canonical_json_dumps,
     compute_derivation_id,
+    compute_revision_id,
     FrozenInputPlan,
     SourceRevisionEntry,
 )
@@ -143,6 +144,8 @@ def build_analytical_candidate(
     is_incremental: bool = False,
     memory_limit_mb: int = 8192,
     threads: int = 4,
+    release_id: str | None = None,
+    registry: Registry | None = None,
 ) -> Path:
     """Constructs an unpublished analytical candidate database.
     
@@ -155,6 +158,7 @@ def build_analytical_candidate(
     st_dir = Path(staging_dir)
     st_dir.mkdir(parents=True, exist_ok=True)
     candidate_db = st_dir / "candidate.duckdb"
+    resolved_release_id = release_id or str(uuid.uuid4())
 
     if is_incremental:
         if not base_release_db_path or not Path(base_release_db_path).exists():
@@ -183,21 +187,71 @@ def build_analytical_candidate(
         contributions_map: dict[str, tuple[str, int]] = {}
 
         def _find_parquet(entry: SourceRevisionEntry) -> Path:
+            raw_root = Path(raw_data_dir)
             candidates = [
-                Path(raw_data_dir) / f"{entry.revision_id}.parquet",
-                Path(raw_data_dir) / f"{entry.logical_source_id.split('/')[-1]}.parquet",
-                Path(raw_data_dir) / f"{entry.logical_source_id.replace('/', '_')}.parquet",
+                raw_root / f"{entry.revision_id}.parquet",
+                raw_root / f"{entry.logical_source_id.split('/')[-1]}.parquet",
+                raw_root / f"{entry.logical_source_id.replace('/', '_')}.parquet",
             ]
+            entry_sha = getattr(entry, "content_sha256", None)
+            if entry_sha:
+                candidates.extend([
+                    raw_root / "sha256" / entry_sha[:2] / entry_sha / "source.parquet",
+                    raw_root / "sha256" / entry_sha / "source.parquet",
+                ])
+
             for c in candidates:
                 if c.exists():
                     return c
+
+            # Check registry if provided or discoverable next to raw_data_dir
+            reg_db = registry.db_path if registry is not None else (raw_root.parent / "control" / "registry.sqlite")
+            if reg_db.exists():
+                try:
+                    rcon = sqlite3.connect(f"file:{reg_db}?mode=ro", uri=True)
+                    try:
+                        row = rcon.execute(
+                            "SELECT relative_path, content_sha256 FROM source_revisions WHERE revision_id = ?;",
+                            (entry.revision_id,),
+                        ).fetchone()
+                        if row:
+                            rel_p, c_sha = row
+                            data_root_dir = registry.data_root if registry is not None else raw_root.parent
+                            reg_candidates = [
+                                data_root_dir / rel_p,
+                                raw_root / rel_p,
+                                raw_root / "sha256" / c_sha[:2] / c_sha / "source.parquet",
+                                raw_root / "sha256" / c_sha / "source.parquet",
+                            ]
+                            for rc in reg_candidates:
+                                if rc.exists():
+                                    return rc
+                    finally:
+                        rcon.close()
+                except Exception:
+                    pass
+
+            # Check content-addressed sha256 directory under raw_data_dir
+            sha_dir = raw_root / "sha256"
+            if sha_dir.exists():
+                for p in sha_dir.rglob("*.parquet"):
+                    parent_sha = p.parent.name
+                    if len(parent_sha) == 64:
+                        try:
+                            if compute_revision_id(entry.logical_source_id, parent_sha) == entry.revision_id:
+                                return p
+                        except Exception:
+                            pass
+
             # Return first candidate path for clear error message
             return candidates[0]
 
         def _stream_entry(entry: SourceRevisionEntry) -> tuple[str, int]:
             parquet_path = _find_parquet(entry)
             source_month = entry.logical_source_id.split("/")[-1]
-            adapter_id = plan.schema_adapter_version
+            adapter_id = (
+                "hvfhv_24col_pre2025.v1" if source_month < "2025-01" else "hvfhv_25col_2025onward.v1"
+            )
             cbd_present = (source_month >= "2025-01")
 
             hasher = hashlib.sha256()
@@ -275,7 +329,7 @@ def build_analytical_candidate(
 
         populate_release_metadata(
             con,
-            release_id=str(uuid.uuid4()),
+            release_id=resolved_release_id,
             derivation_id=derivation_id,
             model_schema_version=plan.model_schema_version,
             rules_version=plan.rules_hash,
@@ -294,7 +348,7 @@ def build_analytical_candidate(
         engine.run_pre_seal_rules(
             plan_months=plan_months,
             expected_derivation_id=derivation_id,
-            is_earliest_month=True,
+            is_earliest_month=(len(plan_months) <= 1),
         )
 
         finalize_duckdb_writer(con, candidate_db)
@@ -369,9 +423,132 @@ def verify_build_equivalence(
         con_inc.close()
 
 
+def preview_retention_cleanup_option_a(
+    registry: Registry,
+    data_root: Path | str,
+) -> dict[str, Any]:
+    """Computes a deterministic read-only preview of Option A retention cleanup without mutating state.
+    
+    Computes:
+    - protected set (current + 1 prior distinct published release)
+    - eligible candidate releases and exact relative paths
+    - byte counts, protected_set_digest, and preview_digest
+    """
+    root = Path(data_root)
+    releases_dir = root / "releases"
+
+    con = registry.get_connection()
+    try:
+        cur_row = con.execute("SELECT release_id, generation FROM current_release WHERE id = 1").fetchone()
+        if not cur_row or not cur_row[0]:
+            empty_prot = canonical_json_dumps([])
+            empty_prot_digest = hashlib.sha256(empty_prot.encode("utf-8")).hexdigest()
+            empty_prev = canonical_json_dumps({
+                "policy": "OPTION_A",
+                "expected_generation": 0,
+                "protected_releases": [],
+                "candidates": [],
+                "total_reclaimable_bytes": 0,
+            })
+            empty_prev_digest = hashlib.sha256(empty_prev.encode("utf-8")).hexdigest()
+            return {
+                "status": "NO_CURRENT_RELEASE",
+                "policy": "OPTION_A",
+                "expected_generation": 0,
+                "current_release_id": None,
+                "protected_releases": [],
+                "protected_set_json": empty_prot,
+                "protected_set_digest": empty_prot_digest,
+                "candidates": [],
+                "candidate_releases": [],
+                "total_reclaimable_bytes": 0,
+                "preview_json": empty_prev,
+                "preview_digest": empty_prev_digest,
+            }
+
+        current_rel_id = str(cur_row[0])
+        expected_gen = int(cur_row[1])
+
+        pub_events = con.execute(
+            "SELECT selected_release_id, new_generation FROM publication_events "
+            "ORDER BY new_generation DESC"
+        ).fetchall()
+
+        protected_releases: list[str] = [current_rel_id]
+        for row in pub_events:
+            rel_id = str(row[0])
+            if rel_id not in protected_releases:
+                protected_releases.append(rel_id)
+            if len(protected_releases) >= 2:
+                break
+
+        all_releases = con.execute(
+            "SELECT release_id, release_directory, database_sha256, status "
+            "FROM releases WHERE status IN ('FINALIZED', 'VERIFIED') "
+            "ORDER BY finalized_at_utc ASC, release_id ASC"
+        ).fetchall()
+    finally:
+        con.close()
+
+    candidate_items: list[dict[str, Any]] = []
+    total_reclaimable = 0
+
+    for rel_id, rel_dir_str, db_sha256, status in all_releases:
+        if rel_id in protected_releases:
+            continue
+
+        rel_dir = Path(rel_dir_str)
+        if not rel_dir.is_absolute():
+            rel_dir = root / rel_dir
+        if not rel_dir.exists():
+            rel_dir = releases_dir / rel_id
+
+        db_file = rel_dir / "analytics.duckdb"
+        file_size = db_file.stat().st_size if db_file.exists() else 0
+        total_reclaimable += file_size
+
+        candidate_items.append({
+            "release_id": rel_id,
+            "exact_relative_path": f"releases/{rel_id}/analytics.duckdb",
+            "artifact_hash": db_sha256,
+            "artifact_identity": rel_id,
+            "byte_count": file_size,
+            "status": status,
+        })
+
+    protected_set_json = canonical_json_dumps(sorted(protected_releases))
+    protected_set_digest = hashlib.sha256(protected_set_json.encode("utf-8")).hexdigest()
+
+    preview_payload = {
+        "policy": "OPTION_A",
+        "expected_generation": expected_gen,
+        "protected_releases": protected_releases,
+        "candidates": candidate_items,
+        "total_reclaimable_bytes": total_reclaimable,
+    }
+    preview_json = canonical_json_dumps(preview_payload)
+    preview_digest = hashlib.sha256(preview_json.encode("utf-8")).hexdigest()
+
+    return {
+        "status": "PREVIEW_READY",
+        "policy": "OPTION_A",
+        "expected_generation": expected_gen,
+        "current_release_id": current_rel_id,
+        "protected_releases": protected_releases,
+        "protected_set_json": protected_set_json,
+        "protected_set_digest": protected_set_digest,
+        "candidates": candidate_items,
+        "candidate_releases": [c["release_id"] for c in candidate_items],
+        "total_reclaimable_bytes": total_reclaimable,
+        "preview_json": preview_json,
+        "preview_digest": preview_digest,
+    }
+
+
 def enforce_retention_policy_option_a(
     registry: Registry,
     data_root: Path | str,
+    preview: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Enforces Option A retention policy: retains current + 1 prior verified release.
     
@@ -380,7 +557,7 @@ def enforce_retention_policy_option_a(
     2. Identifies the 1 immediate prior successfully published release.
     3. Protects current + 1 prior release (2 releases total), plus raw data and metadata.
     4. Any release older than the protected set is retired:
-       - Marked as RETIRED in SQLite control registry.
+       - Marked as RETIRED in SQLite control registry via registry.retire_release (recording release_status_events).
        - Records a reviewed cleanup request and item receipts in SQLite.
        - Removes analytics.duckdb file payload to reclaim storage.
        - Preserves manifest.json and validation.json for audit and provenance.
@@ -388,100 +565,80 @@ def enforce_retention_policy_option_a(
     root = Path(data_root)
     releases_dir = root / "releases"
 
-    with writer_lock(root):
-        con = registry.get_connection()
-        try:
-            # Query current release
-            cur_row = con.execute("SELECT release_id, generation FROM current_release WHERE id = 1").fetchone()
-            if not cur_row or not cur_row[0]:
-                return {"status": "NO_CURRENT_RELEASE", "reclaimed_bytes": 0, "retired_count": 0}
+    with writer_lock(root, reentrant=True):
+        current_preview = preview_retention_cleanup_option_a(registry, root)
+        if current_preview["status"] == "NO_CURRENT_RELEASE":
+            return {"status": "NO_CURRENT_RELEASE", "reclaimed_bytes": 0, "retired_count": 0}
 
-            current_rel_id = cur_row[0]
-
-            # Query historical published releases ordered by generation descending
-            pub_events = con.execute(
-                "SELECT selected_release_id, new_generation FROM publication_events "
-                "ORDER BY new_generation DESC"
-            ).fetchall()
-
-            # Protected releases: current + 1 distinct prior release (Option A)
-            protected_releases: list[str] = []
-            for row in pub_events:
-                rel_id = row[0]
-                if rel_id not in protected_releases:
-                    protected_releases.append(rel_id)
-                if len(protected_releases) >= 2:
-                    break
-
-            # Find releases eligible for retirement
-            all_releases = con.execute(
-                "SELECT release_id, release_directory, status FROM releases WHERE status IN ('FINALIZED', 'VERIFIED')"
-            ).fetchall()
-
-            cleanup_id = str(uuid.uuid4())
-            preview_json = json.dumps({"policy": "OPTION_A", "protected": protected_releases, "cleanup_id": cleanup_id})
-            preview_digest = hashlib.sha256(preview_json.encode("utf-8")).hexdigest()
-            protected_set_json = json.dumps(sorted(protected_releases))
-            protected_set_digest = hashlib.sha256(protected_set_json.encode("utf-8")).hexdigest()
-
-            registry.record_cleanup_request(
-                cleanup_id=cleanup_id,
-                preview_digest=preview_digest,
-                preview_json=preview_json,
-                expected_generation=cur_row[1],
-                protected_set_digest=protected_set_digest,
-                protected_set_json=protected_set_json,
-                review_reference="Retention Policy Option A Automated Run",
-            )
-
-            reclaimed_bytes = 0
-            retired_releases: list[str] = []
-
-            for rel_id, rel_dir_str, status in all_releases:
-                if rel_id in protected_releases:
-                    continue
-
-                rel_dir = Path(rel_dir_str)
-                if not rel_dir.exists():
-                    rel_dir = releases_dir / rel_id
-
-                db_file = rel_dir / "analytics.duckdb"
-                file_size = db_file.stat().st_size if db_file.exists() else 0
-
-                item_id = str(uuid.uuid4())
-                registry.record_cleanup_items(
-                    cleanup_id=cleanup_id,
-                    items=[
-                        {
-                            "item_id": item_id,
-                            "exact_relative_path": f"releases/{rel_id}/analytics.duckdb",
-                            "artifact_identity": rel_id,
-                            "byte_count": file_size,
-                            "diagnostic": None,
-                        }
-                    ],
+        if preview is not None:
+            if (
+                preview.get("expected_generation") != current_preview["expected_generation"]
+                or preview.get("protected_set_digest") != current_preview["protected_set_digest"]
+                or preview.get("preview_digest") != current_preview["preview_digest"]
+            ):
+                raise StaleGenerationConflictError(
+                    "Cleanup preview does not match current generation or protected set digest."
                 )
 
-                # Transition release status to RETIRED
-                con.execute("UPDATE releases SET status = 'RETIRED' WHERE release_id = ?", (rel_id,))
-                con.commit()
+        cleanup_id = str(uuid.uuid4())
+        registry.record_cleanup_request(
+            cleanup_id=cleanup_id,
+            preview_digest=current_preview["preview_digest"],
+            preview_json=current_preview["preview_json"],
+            expected_generation=current_preview["expected_generation"],
+            protected_set_digest=current_preview["protected_set_digest"],
+            protected_set_json=current_preview["protected_set_json"],
+            review_reference="Retention Policy Option A Automated Run",
+        )
 
-                # Remove DuckDB payload file while preserving manifest.json and validation.json
-                if db_file.exists():
-                    db_file.unlink()
-                    reclaimed_bytes += file_size
+        reclaimed_bytes = 0
+        retired_releases: list[str] = []
 
-                registry.update_cleanup_item_outcome(cleanup_id, item_id, "DELETED")
-                retired_releases.append(rel_id)
+        for cand in current_preview["candidates"]:
+            rel_id = cand["release_id"]
+            file_size = cand["byte_count"]
+            rel_dir = releases_dir / rel_id
+            db_file = rel_dir / "analytics.duckdb"
 
-            return {
-                "status": "SUCCESS",
-                "policy": "OPTION_A",
-                "protected_releases": protected_releases,
-                "retired_count": len(retired_releases),
-                "retired_releases": retired_releases,
-                "reclaimed_bytes": reclaimed_bytes,
-                "reclaimed_mib": round(reclaimed_bytes / (1024 * 1024), 2),
-            }
-        finally:
-            con.close()
+            item_id = str(uuid.uuid4())
+            registry.record_cleanup_items(
+                cleanup_id=cleanup_id,
+                items=[
+                    {
+                        "item_id": item_id,
+                        "exact_relative_path": cand["exact_relative_path"],
+                        "artifact_hash": cand.get("artifact_hash"),
+                        "artifact_identity": rel_id,
+                        "byte_count": file_size,
+                        "diagnostic": None,
+                    }
+                ],
+            )
+
+            # Transition release status to RETIRED and record release_status_events audit row
+            registry.retire_release(
+                release_id=rel_id,
+                reason="Option A retention retirement",
+                evidence_reference=cleanup_id,
+            )
+
+            # Remove DuckDB payload file while preserving manifest.json and validation.json
+            if db_file.exists():
+                db_file.unlink()
+                reclaimed_bytes += file_size
+
+            registry.update_cleanup_item_outcome(cleanup_id, item_id, "DELETED")
+            retired_releases.append(rel_id)
+
+        return {
+            "status": "SUCCESS",
+            "cleanup_id": cleanup_id,
+            "policy": "OPTION_A",
+            "protected_releases": current_preview["protected_releases"],
+            "protected_set_digest": current_preview["protected_set_digest"],
+            "preview_digest": current_preview["preview_digest"],
+            "retired_count": len(retired_releases),
+            "retired_releases": retired_releases,
+            "reclaimed_bytes": reclaimed_bytes,
+            "reclaimed_mib": round(reclaimed_bytes / (1024 * 1024), 2),
+        }

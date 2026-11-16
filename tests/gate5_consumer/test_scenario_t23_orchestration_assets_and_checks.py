@@ -23,7 +23,7 @@ from tests.gate5_consumer.test_scenario_t21_readonly_dashboard_queries import se
 
 
 def test_t23_asset_checks_mirror_pre_seal_rules_success():
-    """Scenario T23: Asset checks evaluated against release validation receipt."""
+    """Scenario T23: Asset checks evaluated against release validation receipt and S08 attestation."""
     with tempfile.TemporaryDirectory() as tmpdir:
         root = Path(tmpdir)
         registry, rel_id, rel_dir = setup_test_published_release(root)
@@ -31,16 +31,26 @@ def test_t23_asset_checks_mirror_pre_seal_rules_success():
         res = execute_asset_checks_from_release(root, rel_id)
         assert res["release_id"] == rel_id
         assert res["all_mandatory_s_passed"] is True
-        assert res["total_checks_evaluated"] == 8
+        assert res["truth_table_passed"] is True
+        assert res["total_checks_evaluated"] == 17  # S01-S08 and Q01-Q09
 
-        # Verify all S01-S08 rules are present and PASS
+        # Verify all S01-S08 rules are present and PASS with BLOCK severity
         for i in range(1, 9):
             rid = f"S0{i}"
             check = res["checks"].get(rid)
             assert check is not None, f"Rule {rid} missing from asset checks"
             assert check["passed"] is True
             assert check["outcome"] == "PASS"
-            assert check["severity"] == "BLOCKING"
+            assert check["severity"] == "BLOCK"
+
+        # Verify all Q01-Q09 rules are present with WARN severity
+        for i in range(1, 10):
+            qid = f"Q0{i}"
+            qcheck = res["checks"].get(qid)
+            assert qcheck is not None, f"Rule {qid} missing from asset checks"
+            assert qcheck["severity"] == "WARN"
+            if qid in ("Q07", "Q09"):
+                assert qcheck["outcome"] == "NOT_APPLICABLE"
 
 
 def test_t23_failing_rule_surfaces_as_asset_check_failure():
@@ -52,14 +62,15 @@ def test_t23_failing_rule_surfaces_as_asset_check_failure():
         # Modify validation.json to simulate a failure in S03 (zone integrity)
         val_file = rel_dir / "validation.json"
         val_data = json.loads(val_file.read_text(encoding="utf-8"))
-        for r in val_data["rule_results"]:
+        for r in val_data["pre_seal_rules"]:
             if r["rule_id"] == "S03":
-                r["outcome"] = "FAIL"
-                r["failing_row_count"] = 5
+                r["status"] = "FAIL"
+                r["exception_count"] = 5
         val_file.write_text(json.dumps(val_data), encoding="utf-8")
 
         res = execute_asset_checks_from_release(root, rel_id)
         assert res["all_mandatory_s_passed"] is False
+        assert res["truth_table_passed"] is False
         assert res["checks"]["S03"]["passed"] is False
         assert res["checks"]["S03"]["outcome"] == "FAIL"
         assert res["checks"]["S03"]["failing_rows"] == 5

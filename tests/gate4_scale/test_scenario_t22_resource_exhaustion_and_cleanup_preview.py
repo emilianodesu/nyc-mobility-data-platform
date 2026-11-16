@@ -23,6 +23,7 @@ from hvfhv.control.registry import Registry
 from hvfhv.transforms.builder import (
     calculate_storage_footprint,
     enforce_retention_policy_option_a,
+    preview_retention_cleanup_option_a,
     StorageBudgetExceededError,
 )
 
@@ -139,7 +140,21 @@ def test_t22_option_a_retention_policy_protects_current_and_one_prior():
         # Under Option A, protected set must be: rel_4 (current) and rel_3 (1 prior)
         # rel_1 and rel_2 must be retired and their duckdb payloads unlinked!
 
-        cleanup_result = enforce_retention_policy_option_a(registry, data_root=root)
+        # First verify read-only preview without mutating state
+        preview = preview_retention_cleanup_option_a(registry, data_root=root)
+        assert preview["status"] == "PREVIEW_READY"
+        assert preview["expected_generation"] == 4
+        assert len(preview["protected_releases"]) == 2
+        assert releases_info[3][0] in preview["protected_releases"]
+        assert releases_info[2][0] in preview["protected_releases"]
+        assert len(preview["candidates"]) == 2
+        assert len(preview["protected_set_digest"]) == 64
+        assert len(preview["preview_digest"]) == 64
+        # Files must still exist after preview
+        assert (releases_info[0][1] / "analytics.duckdb").exists()
+        assert (releases_info[1][1] / "analytics.duckdb").exists()
+
+        cleanup_result = enforce_retention_policy_option_a(registry, data_root=root, preview=preview)
         assert cleanup_result["status"] == "SUCCESS"
         assert cleanup_result["policy"] == "OPTION_A"
         assert len(cleanup_result["protected_releases"]) == 2
@@ -160,7 +175,7 @@ def test_t22_option_a_retention_policy_protects_current_and_one_prior():
         assert (releases_info[0][1] / "manifest.json").exists()
         assert (releases_info[1][1] / "manifest.json").exists()
 
-        # Verify SQLite status
+        # Verify SQLite status and release_status_events audit trail
         con = registry.get_connection()
         try:
             r1_status = con.execute("SELECT status FROM releases WHERE release_id = ?", [releases_info[0][0]]).fetchone()[0]
@@ -172,5 +187,13 @@ def test_t22_option_a_retention_policy_protects_current_and_one_prior():
             assert r2_status == "RETIRED"
             assert r3_status == "VERIFIED"
             assert r4_status == "VERIFIED"
+
+            retired_events = con.execute(
+                "SELECT release_id, previous_status, new_status, evidence_reference "
+                "FROM release_status_events WHERE new_status = 'RETIRED'"
+            ).fetchall()
+            assert len(retired_events) == 2
+            retired_event_ids = {row[0] for row in retired_events}
+            assert retired_event_ids == {releases_info[0][0], releases_info[1][0]}
         finally:
             con.close()

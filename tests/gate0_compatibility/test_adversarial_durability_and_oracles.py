@@ -280,10 +280,9 @@ def test_analytical_engine_runtime_audit():
         print("                         Gate G0 tests test_duckdb_arrow.py (10 tests) CANNOT be executed.")
         print("                         Zero .wal post-condition, transaction barrier, read-only immutability,")
         print("                         and continuous quantile execution in DuckDB remain UNEXECUTED empirically.")
-        return False
+        raise AssertionError("DuckDB and/or PyArrow are not installed in the virtual environment")
     else:
         print("     DuckDB and PyArrow are present.")
-        return True
 
 
 # ==============================================================================
@@ -300,7 +299,11 @@ def main():
     with tempfile.TemporaryDirectory() as td:
         test_sqlite_pragmas_adversarial_stress(Path(td))
         
-    analytical_ready = test_analytical_engine_runtime_audit()
+    try:
+        test_analytical_engine_runtime_audit()
+        analytical_ready = True
+    except AssertionError:
+        analytical_ready = False
     
     print("=" * 70)
     if not analytical_ready:

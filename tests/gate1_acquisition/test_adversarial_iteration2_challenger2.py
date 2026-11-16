@@ -16,12 +16,16 @@ Rigorously stress-tests and verifies:
 
 from __future__ import annotations
 
+import io
 import os
 from pathlib import Path
 import sqlite3
 import tempfile
 import time
 from typing import Any
+
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 from hvfhv.config import SystemConfig
 from hvfhv.control.registry import Registry
@@ -102,10 +106,46 @@ class MockClient:
         pass
 
 
-def make_synthetic_parquet() -> bytes:
-    """Return synthetic valid Parquet byte structure."""
-    payload = b"HVFHV_SYNTHETIC_DATA_PAYLOAD_VALID"
-    return b"PAR1" + payload + b"\x00\x00\x00\x00" + b"PAR1"
+def make_synthetic_parquet(num_rows: int = 100, is_2025: bool = False) -> bytes:
+    """Return a genuine valid 24-column or 25-column PyArrow Parquet byte payload."""
+    fields = [
+        ("hvfhs_license_num", pa.string()),
+        ("dispatching_base_num", pa.string()),
+        ("originating_base_num", pa.string()),
+        ("request_datetime", pa.timestamp("us")),
+        ("on_scene_datetime", pa.timestamp("us")),
+        ("pickup_datetime", pa.timestamp("us")),
+        ("dropoff_datetime", pa.timestamp("us")),
+        ("PULocationID", pa.int64()),
+        ("DOLocationID", pa.int64()),
+        ("trip_miles", pa.float64()),
+        ("trip_time", pa.int64()),
+        ("base_passenger_fare", pa.float64()),
+        ("tolls", pa.float64()),
+        ("bcf", pa.float64()),
+        ("sales_tax", pa.float64()),
+        ("congestion_surcharge", pa.float64()),
+        ("airport_fee", pa.float64()),
+        ("tips", pa.float64()),
+        ("driver_pay", pa.float64()),
+        ("shared_request_flag", pa.string()),
+        ("shared_match_flag", pa.string()),
+        ("access_a_ride_flag", pa.string()),
+        ("wav_request_flag", pa.string()),
+        ("wav_match_flag", pa.string()),
+    ]
+    if is_2025:
+        fields.append(("cbd_congestion_fee", pa.float64()))
+
+    schema = pa.schema(fields)
+    data = {
+        name: [None] * num_rows if t != pa.int64() else [1] * num_rows
+        for name, t in fields
+    }
+    table = pa.Table.from_pydict(data, schema=schema)
+    buf = io.BytesIO()
+    pq.write_table(table, buf)
+    return buf.getvalue()
 
 
 # ==============================================================================

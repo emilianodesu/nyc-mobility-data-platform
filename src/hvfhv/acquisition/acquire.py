@@ -25,10 +25,8 @@ try:
 except ImportError:
     httpx = None
 
-try:
-    import pyarrow.parquet as pq
-except ImportError:
-    pq = None
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 from hvfhv.config import SystemConfig
 from hvfhv.contracts.identity import compute_revision_id
@@ -106,7 +104,26 @@ def fsync_path(path: Path) -> None:
 
 def _inspect_parquet(part_path: Path) -> tuple[int, int, str]:
     """Inspect Parquet file for row counts and schema fingerprint."""
-    if pq is not None:
+    try:
+        file_size = part_path.stat().st_size
+    except OSError as exc:
+        raise CorruptionError(f"Invalid or corrupt Parquet file: {exc}") from exc
+
+    if file_size < 8:
+        raise CorruptionError(
+            f"Invalid Parquet file: size {file_size} bytes is less than 8 bytes (PAR1 magic header/footer missing)"
+        )
+
+    with open(part_path, "rb") as f:
+        header = f.read(4)
+        if header != b"PAR1":
+            raise CorruptionError("Invalid Parquet file: PAR1 magic header missing")
+        f.seek(-4, os.SEEK_END)
+        footer_magic = f.read(4)
+        if footer_magic != b"PAR1":
+            raise CorruptionError("Invalid Parquet file: PAR1 magic footer missing")
+
+    try:
         parquet_file = pq.ParquetFile(part_path)
         footer_row_count = parquet_file.metadata.num_rows
         schema_fingerprint = identify_parquet_schema(parquet_file.schema_arrow.names)
@@ -118,21 +135,10 @@ def _inspect_parquet(part_path: Path) -> tuple[int, int, str]:
                 f"Decoded rows ({decoded_row_count}) does not match footer rows ({footer_row_count})"
             )
         return footer_row_count, decoded_row_count, schema_fingerprint
-
-    # Pure Python Parquet header and footer validation fallback
-    with open(part_path, "rb") as f:
-        header = f.read(4)
-        if header != b"PAR1":
-            raise CorruptionError("Invalid Parquet file: PAR1 magic header missing")
-        f.seek(-4, os.SEEK_END)
-        footer_magic = f.read(4)
-        if footer_magic != b"PAR1":
-            raise CorruptionError("Invalid Parquet file: PAR1 magic footer missing")
-        # In mock / simulated testing without pyarrow, read row count from trailer or default to 100
-        footer_row_count = 100
-        decoded_row_count = 100
-        schema_fingerprint = "hvfhv_24col_pre2025.v1"
-        return footer_row_count, decoded_row_count, schema_fingerprint
+    except (UnsupportedSchemaError, CorruptionError):
+        raise
+    except (pa.ArrowException, OSError, Exception) as exc:
+        raise CorruptionError(f"Invalid or corrupt Parquet file: {exc}") from exc
 
 
 def _inspect_csv(part_path: Path) -> tuple[int, int, str]:

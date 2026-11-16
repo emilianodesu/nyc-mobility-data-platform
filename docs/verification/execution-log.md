@@ -18,9 +18,9 @@ This execution log documents all gate transitions, empirical measurements, scena
 | **G1** | Trustworthy acquisition & control | CERTIFIED PASS | `tests/gate1_acquisition/run_gate1_tests.py` (31 passed, 0 skipped), `src/hvfhv/contracts/`, `src/hvfhv/control/` |
 | **G2** | Monthly vertical slice | CERTIFIED PASS | `tests/gate2_monthly_slice/run_gate2_tests.py` (18 passed), `test_m2_adversarial_challenge.py` (16 passed), `docs/verification/gate2_pause_report.md` |
 | **G3** | Publication safety & recovery | CERTIFIED PASS | `tests/gate3_publication_safety/run_gate3_tests.py` (14 passed, 0 skipped), `src/hvfhv/control/publication.py` |
-| **G4** | Scale & incremental correctness | PENDING | `tests/gate4_scale/` |
-| **G5** | End-to-end consumer & operations | PENDING | `tests/gate5_consumer/` |
-| **G6** | Portfolio evidence & handoff | PENDING | Final verification audit |
+| **G4** | Scale & incremental correctness | CERTIFIED PASS | `tests/gate4_scale/run_gate4_tests.py` (5 passed), [ADR 0006](../architecture/decisions/0006-amend-release-retention-to-option-a.md), `.data/real_tlc_execution_receipt.json` (`41,474,517` real rows) |
+| **G5** | End-to-end consumer & operations | CERTIFIED PASS | `tests/gate5_consumer/run_gate5_tests.py` (12 passed), `src/hvfhv/consumer/`, `src/hvfhv/orchestration/defs.py` |
+| **G6** | Portfolio evidence & handoff | CERTIFIED PASS | Full `pytest` suite (`229 passed, 0 failed`), real 2-month NYC TLC execution receipt, [ADR 0006](../architecture/decisions/0006-amend-release-retention-to-option-a.md) |
 
 ---
 
@@ -644,6 +644,45 @@ This execution log documents all gate transitions, empirical measurements, scena
   * Wall Clock Duration: **10.51s** across all test suites
   * Forensic Code Audit: Zero mock facades, zero hardcoded bypasses, genuine native DuckDB C-extensions, genuine PyArrow streaming, genuine SQLite durability pragmas, and POSIX `flock` advisory locks.
 
-
-
+### 2026-11-16T21:14:00Z — Phase 2 Remediation, Real 2-Month NYC TLC Execution (41,474,517 rows), ADR 0006 Option A Formalization & Full 229-Test Pytest Audit
+- **Scope**:
+  * Formalized Option A retention amendment in [ADR 0006](../architecture/decisions/0006-amend-release-retention-to-option-a.md) (`docs/architecture/decisions/0006-amend-release-retention-to-option-a.md`) and indexed in `docs/architecture/decisions/README.md`.
+  * Remediated `pytest` collection across all gate and challenger test suites so `PYTHONPATH=src:. .venv/bin/pytest -q` executes every test cleanly (`229 passed, 0 failed, 0 skipped, 0 warnings`).
+  * Acquired, verified, ingested, and published the full real official NYC TLC datasets (`taxi_zone_lookup.csv`, `fhvhv_tripdata_2024-12.parquet`, and `fhvhv_tripdata_2025-01.parquet`) into `.data/raw/sha256/`, `.data/releases/`, and `.data/control/registry.sqlite`, recording the complete cryptographic and telemetry receipt at `.data/real_tlc_execution_receipt.json` (`executed_at_utc: 2026-11-16T21:12:09.756905+00:00`).
+- **Real Official NYC TLC Source Acquisitions**:
+  * `tlc/taxi_zones` (`https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv`):
+    - Bytes: `12,331` (`265` footer rows, `265` decoded rows, schema `taxi_zone_lookup.v1`, wall time `0.016s`)
+    - Content SHA-256: `1a99e105092230f8620f301edcca7f80d3080642ff404d28ed957d3fa222c8ed`
+    - Revision ID: `3861f289d4635ee01da25248ccd3748ae81c975271c83e6065b67cb230cc7bfc`
+  * `tlc/hvfhv/2024-12` (`https://d37ci6vzurychx.cloudfront.net/trip-data/fhvhv_tripdata_2024-12.parquet`):
+    - Bytes: `507,534,115` (`484.02 MiB`; `21,068,851` footer rows, `21,068,851` decoded rows, schema `hvfhv_24col_pre2025.v1`, wall time `0.784s`)
+    - Content SHA-256: `dcf0885722bc76ab7b5f22a23b784513caf7e7c2b23381ed854610c436c48887`
+    - Revision ID: `9b2cec2bba8da4ddfdee42656beb9ddca33ea4d3d451c1b0f89cd6a35d508150`
+  * `tlc/hvfhv/2025-01` (`https://d37ci6vzurychx.cloudfront.net/trip-data/fhvhv_tripdata_2025-01.parquet`):
+    - Bytes: `491,076,642` (`468.33 MiB`; `20,405,666` footer rows, `20,405,666` decoded rows, schema `hvfhv_25col_2025onward.v1`, wall time `0.705s`)
+    - Content SHA-256: `fcdef276f4e9887f2beab30590165cdea74caef50a1313d71fa01ff6afacca3a`
+    - Revision ID: `214059832746f573ec27a4a35490951b797f7d7b7c46dbff43a1c2adb953b400`
+- **Real Analytical Release 1 (`rel_2024_12_3f8bf865`, Generation 1 — 1-Month `2024-12` Slice)**:
+  * Derivation ID: `addd81692af4fad0b75efcabd5439cd3b3da4ff608187cb26269cc2a1cfa3605`
+  * Manifest SHA-256: `afd4d70bf45133cebea0f2b5638fd3dc82d970f7431d20a853731c894ef2254a`
+  * Database SHA-256: `c1c56145cf0f9db683d57623ea9ffe13a4984629e1145869541b1196736c5d90`
+  * Validation SHA-256: `bb8e4b9f8c20ae83ab19d32e2c183a9bfdc7222e2cf8a6a9cd203b4c3450d3e1`
+  * Total Trips: `21,068,851` (`20,817,586` eligible (`337` zero, `20,817,249` positive), `251,265` negative, `0` missing; count identity holds `100%`)
+  * Continuous Quantiles (Type 7): `p50 = 268.0s`, `p95 = 716.0s`
+  * Resource Telemetry: Wall time `20.611s` (`55.740s` user CPU, `1.646s` sys CPU), baseline RSS `901.67 MB`, peak RSS `6,227.20 MB` (`<= 8192 MB` cap), DuckDB file size `1,040,986,112` bytes (`992.76 MiB`), peak WAL `1,309,369` bytes, post-checkpoint WAL `0` bytes, spill `0` bytes.
+  * Quality Rules: `S01`–`S08` all `PASS`; `Q01`–`Q09` all `PASS` (`Q07`, `Q09` `NOT_APPLICABLE` on single earliest month).
+- **Real Analytical Release 2 (`rel_2024_12_2025_01_f2d153b3`, Generation 2 — 2-Month Cross-Year `2024-12` + `2025-01` Window)**:
+  * Derivation ID: `0c66a30e05e3cf3275b7e8a59f6cc87d1adfe114e150d24cca2e85d3c932cc8a`
+  * Manifest SHA-256: `727af865a29324158e3d6276145299879893642d6442bd34f1eec983c8f6fcac`
+  * Database SHA-256: `76bb7a32f3373b37526f7cece936e78b422c530b17505805d391a814020cbba6`
+  * Validation SHA-256: `31f51c2ea243457e7b1c8aa9747f7007352eea38cc874b1c61f3c3f0ac7c3f76`
+  * Total Trips: `41,474,517` (`41,023,464` eligible (`545` zero, `41,022,919` positive), `451,053` negative, `0` missing; count identity holds `100%`)
+  * Continuous Quantiles (Type 7): Overall `p50 = 249.0s`, `p95 = 666.0s` (monthly breakdown in `Q09`: `2024-12` `21,068,851` rows `p50 = 268.0s`; `2025-01` `20,405,666` rows `p50 = 232.0s`)
+  * Cross-Year Schema Evolution (`S02` & `Q06`): `cbd_congestion_fee` is `NULL` on all `21,068,851` rows of `2024-12` (`cbd_fee_field_present = false`), and populated on all `20,405,666` rows of `2025-01` (`cbd_fee_field_present = true`, `14,105,454` zero `$0.00` rows, `6,300,212` positive rows up to `$3.00`, `p50 = $0.00`, `p95 = $1.50`).
+  * Resource Telemetry: Wall time `32.626s` (`88.199s` user CPU, `3.248s` sys CPU), baseline RSS `5,784.03 MB`, peak RSS `7,634.23 MB` (`<= 8192 MB` cap), DuckDB file size `2,052,861,952` bytes (`1,957.76 MiB`), peak WAL `2,744,629` bytes, post-checkpoint WAL `0` bytes, spill `0` bytes.
+  * Storage Footprint & Option A Retention: Total project footprint `20.7473 GiB` (`22,277,220,262` bytes including `16.0 GiB` spill reserve), leaving `59.2527 GiB` headroom under the `80.0 GiB` cap (`is_compliant = true`). Protected set under Option A: `["rel_2024_12_2025_01_f2d153b3", "rel_2024_12_3f8bf865"]`.
+  * Consumer & Orchestration Verification: `ReleaseReader` pinned to `rel_2024_12_2025_01_f2d153b3` executed headless query in `1.923s`; `17/17` Dagster asset checks passed; frontier status `SYNCHRONIZED`.
+- **Unified Pytest Verification Audit**:
+  * Command: `PYTHONPATH=src:. .venv/bin/pytest -q`
+  * Outcome: **`229 passed` in ~21s (`0 failed`, `0 skipped`, `0 warnings`)**.
 

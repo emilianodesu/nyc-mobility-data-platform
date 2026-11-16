@@ -30,7 +30,7 @@ Source month = object provenance. Event date = recorded pickup date. Observation
 | R14 | One mutating application process; CLI and orchestration respect the same lock; stale plans cannot select over changed generations | Control | T15, T19 |
 | R15 | Recover uncertain publication outcomes by idempotent event identity; an old successful operation must not reselect itself | Control | T17–T19 |
 | R16 | Readers pin verified immutable releases and recheck rejection outside caches; corruption or rejection cannot trigger silent fallback | Consumer / control | T20, T21, T27 |
-| R17 | Maintain current plus two distinct prior successful releases; cleanup explicit and cannot remove protected/open artifacts | Operations | T19, T22; cleanup dry-run review |
+| R17 | Maintain current plus two distinct prior successful releases (amended to current plus one prior verified release under [ADR 0006](architecture/decisions/0006-amend-release-retention-to-option-a.md) Option A); cleanup explicit and cannot remove protected/open artifacts | Operations | T19, T22; cleanup dry-run review |
 | R18 | Daily local discovery while environment runs; explicit catch-up/on-demand operations; no always-on promise | Orchestration | T23, T25 |
 | R19 | Reliability and interval views show coverage, denominators, exclusions, versions and separate live operational state | Consumer | T09, T21, T27; G5 visual review |
 | R20 | Resource exhaustion preserves current, reports failure and never silently reduces data or quality scope | Operations / compute | T12, T22, T28; G2/G4/G5 measurements |

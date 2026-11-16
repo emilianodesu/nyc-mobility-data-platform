@@ -178,73 +178,167 @@ def build_interval_aggregates(con: Any) -> tuple[int, int]:
     Returns:
         (daily_row_count, monthly_row_count)
     """
-    con.execute("""
-        INSERT INTO interval_daily (
-            source_month,
-            pickup_date,
-            pu_location_id,
-            hvfhs_license_num,
-            total_trips,
-            eligible_trips,
-            missing_intervals,
-            negative_intervals,
-            median_seconds,
-            p95_seconds
-        )
-        SELECT
-            source_month,
-            pickup_date,
-            pu_location_id,
-            hvfhs_license_num,
-            COUNT(*) AS total_trips,
-            COUNT(*) FILTER (WHERE interval_class = 'eligible_nonnegative_recorded_interval') AS eligible_trips,
-            COUNT(*) FILTER (WHERE interval_class = 'missing_timestamp') AS missing_intervals,
-            COUNT(*) FILTER (WHERE interval_class = 'negative_recorded_interval') AS negative_intervals,
-            quantile_cont(recorded_request_to_pickup_seconds, 0.50)
-                FILTER (WHERE interval_class = 'eligible_nonnegative_recorded_interval') AS median_seconds,
-            quantile_cont(recorded_request_to_pickup_seconds, 0.95)
-                FILTER (WHERE interval_class = 'eligible_nonnegative_recorded_interval') AS p95_seconds
-        FROM trip_qualified
-        GROUP BY
-            source_month,
-            pickup_date,
-            pu_location_id,
-            hvfhs_license_num;
-    """)
+    is_sqlite = hasattr(con, "create_aggregate")
+    if is_sqlite:
+        con.execute("""
+            INSERT INTO interval_daily (
+                source_month,
+                pickup_date,
+                pu_location_id,
+                hvfhs_license_num,
+                total_trips,
+                eligible_trips,
+                missing_intervals,
+                negative_intervals,
+                median_seconds,
+                p95_seconds
+            )
+            SELECT
+                source_month,
+                pickup_date,
+                pu_location_id,
+                hvfhs_license_num,
+                COUNT(*) AS total_trips,
+                COUNT(*) FILTER (WHERE interval_class = 'eligible_nonnegative_recorded_interval') AS eligible_trips,
+                COUNT(*) FILTER (WHERE interval_class = 'missing_timestamp') AS missing_intervals,
+                COUNT(*) FILTER (WHERE interval_class = 'negative_recorded_interval') AS negative_intervals,
+                quantile_cont(recorded_request_to_pickup_seconds, 0.50)
+                    FILTER (WHERE interval_class = 'eligible_nonnegative_recorded_interval') AS median_seconds,
+                quantile_cont(recorded_request_to_pickup_seconds, 0.95)
+                    FILTER (WHERE interval_class = 'eligible_nonnegative_recorded_interval') AS p95_seconds
+            FROM trip_qualified
+            GROUP BY
+                source_month,
+                pickup_date,
+                pu_location_id,
+                hvfhs_license_num;
+        """)
 
-    con.execute("""
-        INSERT INTO interval_monthly (
-            source_month,
-            pickup_month,
-            pu_location_id,
-            hvfhs_license_num,
-            total_trips,
-            eligible_trips,
-            missing_intervals,
-            negative_intervals,
-            median_seconds,
-            p95_seconds
-        )
-        SELECT
-            source_month,
-            pickup_month,
-            pu_location_id,
-            hvfhs_license_num,
-            COUNT(*) AS total_trips,
-            COUNT(*) FILTER (WHERE interval_class = 'eligible_nonnegative_recorded_interval') AS eligible_trips,
-            COUNT(*) FILTER (WHERE interval_class = 'missing_timestamp') AS missing_intervals,
-            COUNT(*) FILTER (WHERE interval_class = 'negative_recorded_interval') AS negative_intervals,
-            quantile_cont(recorded_request_to_pickup_seconds, 0.50)
-                FILTER (WHERE interval_class = 'eligible_nonnegative_recorded_interval') AS median_seconds,
-            quantile_cont(recorded_request_to_pickup_seconds, 0.95)
-                FILTER (WHERE interval_class = 'eligible_nonnegative_recorded_interval') AS p95_seconds
-        FROM trip_qualified
-        GROUP BY
-            source_month,
-            pickup_month,
-            pu_location_id,
-            hvfhs_license_num;
-    """)
+        con.execute("""
+            INSERT INTO interval_monthly (
+                source_month,
+                pickup_month,
+                pu_location_id,
+                hvfhs_license_num,
+                total_trips,
+                eligible_trips,
+                missing_intervals,
+                negative_intervals,
+                median_seconds,
+                p95_seconds
+            )
+            SELECT
+                source_month,
+                pickup_month,
+                pu_location_id,
+                hvfhs_license_num,
+                COUNT(*) AS total_trips,
+                COUNT(*) FILTER (WHERE interval_class = 'eligible_nonnegative_recorded_interval') AS eligible_trips,
+                COUNT(*) FILTER (WHERE interval_class = 'missing_timestamp') AS missing_intervals,
+                COUNT(*) FILTER (WHERE interval_class = 'negative_recorded_interval') AS negative_intervals,
+                quantile_cont(recorded_request_to_pickup_seconds, 0.50)
+                    FILTER (WHERE interval_class = 'eligible_nonnegative_recorded_interval') AS median_seconds,
+                quantile_cont(recorded_request_to_pickup_seconds, 0.95)
+                    FILTER (WHERE interval_class = 'eligible_nonnegative_recorded_interval') AS p95_seconds
+            FROM trip_qualified
+            GROUP BY
+                source_month,
+                pickup_month,
+                pu_location_id,
+                hvfhs_license_num;
+        """)
+    else:
+        con.execute("""
+            INSERT INTO interval_daily (
+                source_month,
+                pickup_date,
+                pu_location_id,
+                hvfhs_license_num,
+                total_trips,
+                eligible_trips,
+                missing_intervals,
+                negative_intervals,
+                median_seconds,
+                p95_seconds
+            )
+            WITH agg AS (
+                SELECT
+                    source_month,
+                    pickup_date,
+                    pu_location_id,
+                    hvfhs_license_num,
+                    COUNT(*) AS total_trips,
+                    COUNT(*) FILTER (WHERE interval_class = 'eligible_nonnegative_recorded_interval') AS eligible_trips,
+                    COUNT(*) FILTER (WHERE interval_class = 'missing_timestamp') AS missing_intervals,
+                    COUNT(*) FILTER (WHERE interval_class = 'negative_recorded_interval') AS negative_intervals,
+                    quantile_cont(recorded_request_to_pickup_seconds, [0.50, 0.95])
+                        FILTER (WHERE interval_class = 'eligible_nonnegative_recorded_interval') AS q_pair
+                FROM trip_qualified
+                GROUP BY
+                    source_month,
+                    pickup_date,
+                    pu_location_id,
+                    hvfhs_license_num
+            )
+            SELECT
+                source_month,
+                pickup_date,
+                pu_location_id,
+                hvfhs_license_num,
+                total_trips,
+                eligible_trips,
+                missing_intervals,
+                negative_intervals,
+                q_pair[1] AS median_seconds,
+                q_pair[2] AS p95_seconds
+            FROM agg;
+        """)
+
+        con.execute("""
+            INSERT INTO interval_monthly (
+                source_month,
+                pickup_month,
+                pu_location_id,
+                hvfhs_license_num,
+                total_trips,
+                eligible_trips,
+                missing_intervals,
+                negative_intervals,
+                median_seconds,
+                p95_seconds
+            )
+            WITH agg AS (
+                SELECT
+                    source_month,
+                    pickup_month,
+                    pu_location_id,
+                    hvfhs_license_num,
+                    COUNT(*) AS total_trips,
+                    COUNT(*) FILTER (WHERE interval_class = 'eligible_nonnegative_recorded_interval') AS eligible_trips,
+                    COUNT(*) FILTER (WHERE interval_class = 'missing_timestamp') AS missing_intervals,
+                    COUNT(*) FILTER (WHERE interval_class = 'negative_recorded_interval') AS negative_intervals,
+                    quantile_cont(recorded_request_to_pickup_seconds, [0.50, 0.95])
+                        FILTER (WHERE interval_class = 'eligible_nonnegative_recorded_interval') AS q_pair
+                FROM trip_qualified
+                GROUP BY
+                    source_month,
+                    pickup_month,
+                    pu_location_id,
+                    hvfhs_license_num
+            )
+            SELECT
+                source_month,
+                pickup_month,
+                pu_location_id,
+                hvfhs_license_num,
+                total_trips,
+                eligible_trips,
+                missing_intervals,
+                negative_intervals,
+                q_pair[1] AS median_seconds,
+                q_pair[2] AS p95_seconds
+            FROM agg;
+        """)
 
     daily_count = con.execute("SELECT COUNT(*) FROM interval_daily;").fetchone()[0]
     monthly_count = con.execute("SELECT COUNT(*) FROM interval_monthly;").fetchone()[0]
