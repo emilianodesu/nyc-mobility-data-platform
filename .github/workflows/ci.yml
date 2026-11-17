@@ -9,8 +9,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      HVFHV_DATA_ROOT: ${{ runner.temp }}/hvfhv_data
     steps:
       - uses: actions/checkout@v4
 
@@ -27,4 +25,6 @@ jobs:
           pip install --no-deps -e .
 
       - name: Run full test suite (Gates G0-G6)
+        env:
+          HVFHV_DATA_ROOT: ${{ runner.temp }}/hvfhv_data
         run: pytest -q
