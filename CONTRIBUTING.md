@@ -8,7 +8,7 @@ Contributions must preserve the platform's correctness invariants, storage const
    - Compute request-to-pickup intervals with 64-bit microsecond integer subtraction divided by `1,000,000.0` on naive source timestamps without timezone fabrication.
    - Compute percentiles via Type 7 continuous quantiles (`quantile_cont`) over the exact eligible population; never average precomputed daily or zone quantiles.
    - Preserve the 3-class partition identity at every aggregation boundary:
-     $$\text{total} = \text{eligible\_nonnegative} + \text{negative\_recorded\_interval} + \text{missing\_timestamp}$$
+     `total = eligible_nonnegative + negative_recorded_interval + missing_timestamp`
 2. **Lock & Publication Safety**:
    - All mutating operations must acquire the advisory POSIX `writer.lock`.
    - Consumer queries must respect `query.lock` and run out-of-cache eligibility validation against SQLite (`registry.sqlite`) before and after query execution.

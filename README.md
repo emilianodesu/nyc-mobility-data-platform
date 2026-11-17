@@ -16,7 +16,7 @@ Processed and audited end-to-end across **41,474,517 official trip records** (`2
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TD
     TLC[Official NYC TLC Parquet & Zones] -->|HTTPS + SHA-256 + PyArrow Decode| Raw[Immutable Content-Addressed Raw Store]
     Raw -->|Writer Lock + Frozen Input Plan| Duck[DuckDB 2.0 Candidate Build]
     Duck -->|SQL Models + Type 7 Quantiles + S01-S08 & Q01-Q09| Gate{Pre/Post-Seal Gate}
@@ -33,7 +33,7 @@ flowchart LR
 - **80 GiB Budget & Option A Retention ([ADR 0006](docs/architecture/decisions/0006-amend-release-retention-to-option-a.md))**: Measured 12-month projections showed that retaining 4 full-window DuckDB snapshots (`current` + `2` prior + `1` staging candidate) would reach `~98.13 GiB` and breach the `80.0 GiB` workstation cap. Under Option A, the retention engine protects `current` + `1` prior verified database (`~20.75 GiB` measured on 2 months; `~57–63 GiB` at 12 months) and performs audited retirement of older `.duckdb` binaries while preserving cryptographic manifests and raw Parquet files for deterministic rebuilds.
 - **Cross-Year Schema Evolution (`24 → 25` Columns)**: `hvfhv_24col_pre2025.v1` (`2024-12`) lacks `cbd_congestion_fee`, whereas `hvfhv_25col_2025onward.v1` (`2025-01+`) introduces it. The transform layer tracks `cbd_fee_field_present` explicitly so pre-2025 `NULL` values are never silently coerced to `$0.00`.
 - **Exact Analytics & Semantic Honesty**:
-  - **Interval Identity**: $\text{total} = \text{eligible\_nonnegative} + \text{negative\_recorded\_interval} + \text{missing\_timestamp}$ holds across all views.
+  - **Interval Identity**: `total = eligible_nonnegative + negative_recorded_interval + missing_timestamp` holds across all views.
   - **Exact Type 7 Quantiles**: `p50` and `p95` are evaluated via DuckDB `quantile_cont` directly on eligible observations (`64-bit` microsecond integer delta), never averaged across daily or zonal subgroups.
   - **Out-of-Cache Consumer Guard**: Streamlit's bounded LRU cache (`32` entries / `5 MiB` cap) verifies release eligibility against SQLite **before and after** every read so a `REJECTED` or `RETIRED` release is blocked immediately.
 
@@ -86,22 +86,22 @@ Measured against official NYC TLC releases (`fhvhv_tripdata_2024-12.parquet`, `f
 ## Repository Layout
 
 ```text
-├── .github/workflows/ci.yml   # Automated CI workflow running the full pytest suite
-├── contracts/                 # JSON schema contracts & validation rules (S01-S08, Q01-Q09)
-├── sql/                       # DuckDB analytical models & continuous quantile profiles
+├── .github/workflows/ci.yml   # GitHub Actions CI running the full pytest suite
+├── contracts/                 # JSON schema & rule definitions (S01-S08, Q01-Q09)
+├── sql/                       # DuckDB models & continuous quantile profiles
 ├── src/hvfhv/
-│   ├── acquisition/           # HTTPS acquisition, SHA-256 verification, PyArrow decode, frontier scan
-│   ├── consumer/              # Read-only DuckDB reader, LRU guard & Streamlit dashboard
-│   ├── contracts/             # RFC 8785 canonical JSON & deterministic derivation hashing
-│   ├── control/               # SQLite registry, POSIX locks, CAS publication & Option A retention
-│   ├── orchestration/         # Dagster assets, schedules, gap-aware sensors & asset checks
-│   └── transforms/            # DuckDB ingestion, 24->25 col adaptation, quality engine & builder
+│   ├── acquisition/           # HTTPS download, SHA-256 verify, PyArrow decode
+│   ├── consumer/              # Read-only DuckDB reader, LRU guard & Streamlit UI
+│   ├── contracts/             # RFC 8785 JSON & deterministic derivation hashes
+│   ├── control/               # SQLite CAS registry, POSIX locks & Option A cleanup
+│   ├── orchestration/         # Dagster assets, schedules & gap-aware checks
+│   └── transforms/            # DuckDB ingest, 24->25 col adapter & quality gate
 ├── scripts/
-│   └── run_real_tlc_pipeline.py  # End-to-end acquisition & publication runner for official NYC TLC files
-├── tests/                     # 229 automated tests across Gates G0-G5 (unit, recovery, adversarial)
-├── docs/                      # Architecture (arc42/ADRs), data contracts, execution logs & UI assets
-├── references/                # Preserved schema inspection profiles from NYC TLC source evaluation
-├── pyproject.toml             # Package metadata & pytest configuration
+│   └── run_real_tlc_pipeline.py  # Real NYC TLC acquisition & release runner
+├── tests/                     # 229 tests across Gates G0-G5 (unit & recovery)
+├── docs/                      # Architecture (arc42/ADRs), contracts, logs & PNGs
+├── references/                # NYC TLC schema inspection profiles
+├── pyproject.toml             # Package metadata & pytest config
 └── requirements.lock          # Pinned dependency lockfile
 ```
 

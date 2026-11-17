@@ -35,7 +35,7 @@ Not included in v1: Spark, Iceberg, Delta, Kafka, object-store servers, cloud in
 ## 3. Responsibility flow
 
 ```mermaid
-flowchart LR
+flowchart TD
     A[Official monthly files and zone lookup] --> B[Discover and acquire]
     B --> C[Immutable originals and source manifests]
     C --> D[Unpublished DuckDB candidate]
