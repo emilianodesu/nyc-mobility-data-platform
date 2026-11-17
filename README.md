@@ -1,193 +1,170 @@
-# NYC TLC High-Volume For-Hire Vehicle (HVFHV) Monthly Data Reliability Platform
+# HVFHV Monthly Data Reliability Platform
 
-A production-grade, local analytical data engineering platform for making New York City Taxi & Limousine Commission (TLC) High Volume For-Hire Vehicle trip data trustworthy, traceable, inspectable, and mathematically reproducible.
+![Python](https://img.shields.io/badge/Python-3.11--3.14-3776AB?logo=python&logoColor=white)
+![DuckDB](https://img.shields.io/badge/DuckDB-2.0.0-FFF000?logo=duckdb&logoColor=black)
+![Dagster](https://img.shields.io/badge/Dagster-1.13.30-4F43DD)
+![PyArrow](https://img.shields.io/badge/PyArrow-26.0.1-0A66C2)
+![Streamlit](https://img.shields.io/badge/Streamlit-1.67.0-FF4B4B?logo=streamlit&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green.svg)
 
-Built for local execution on macOS (Apple Silicon / APFS) and POSIX systems with zero cloud dependencies, zero container requirements, and zero remote network leaks.
+A production-grade, single-machine batch data platform for **official NYC TLC High-Volume For-Hire Vehicle (HVFHV)** trip datasets — combining immutable content-addressed Parquet acquisition, native DuckDB 2.0 transformations, strict SQLite compare-and-swap (CAS) publication control, Dagster orchestration, and a read-only Streamlit analytical console without cloud or distributed-cluster overhead.
 
----
-
-## 1. System Architecture & Engineering Principles
-
-```
-                  [ Official NYC TLC Sources (Parquet / CSV) ]
-                                      │
-                   Bounded Download & Full Decode (G1)
-                                      ▼
-             [ $DATA_ROOT/raw/sha256/<hash>/source.parquet ]
-                   (Immutable Accepted Raw Byte Store)
-                                      │
-               Streaming PyArrow Batches (65,536 rows)
-                                      ▼
-               [ Embedded DuckDB Engine: Staging Candidate ]
-                   ├── Zero-based physical locators
-                   ├── Schema adaptation (Pre-2025 vs 2025+)
-                   ├── Naive 64-bit microsecond interval arithmetic
-                   ├── 3-class mutually exclusive interval partition
-                   └── Type 7 continuous quantiles (quantile_cont)
-                                      │
-                    Pre-Seal Quality Engine (G2, S01–S07)
-                    Semantic Column Profiles (G2, Q01–Q09)
-                    Post-Seal Manifest Digest Check (G3, S08)
-                                      ▼
-                 [ SQLite 3 Control Plane (registry.sqlite) ]
-                   ├── POSIX advisory locking (writer.lock)
-                   ├── Atomic Compare-and-Swap (CAS) publication
-                   ├── Unacknowledged commit crash recovery (T18)
-                   └── Option A Retention Policy (<= 80 GiB Cap, G4)
-                                      │
-                     Verified Analytical Releases (G3)
-                                      ▼
-                 [ Read-Only Consumer Interface (G5) ]
-                   ├── Streamlit Interactive Dashboard (app.py)
-                   │    ├── Data Reliability View (coverage, S01–S08, Q01–Q09)
-                   │    └── Recorded Intervals View (exact p50/p95, denominators)
-                   ├── Out-of-cache SQLite eligibility checks (T21, T27)
-                   ├── POSIX query.lock concurrency barrier
-                   └── Bounded in-memory LRU cache (T28)
-```
-
-### Core Invariants & Mathematical Guarantees
-1. **Raw Traceability & Anti-Inflation**: Every trip observation is traceable to an immutable accepted raw Parquet file via physical tuple locators `(revision_id, source_row_number)`. Re-ingestion of identical or updated revisions purges historical facts without row count inflation.
-2. **Naive Microsecond Arithmetic**: Request-to-pickup intervals are computed via exact 64-bit microsecond integer subtraction divided by `1,000,000.0` on naive source timestamps without invented timezone conversions or assumptions.
-3. **3-Class Mutually Exclusive Partition**: Every observation belongs to exactly one interval class:
-   $$\text{total} = \text{eligible\_nonnegative} + \text{negative\_recorded\_interval} + \text{missing\_timestamp}$$
-4. **Type 7 Continuous Quantiles & Non-Averaging**: Median ($p50$) and 95th percentile ($p95$) are evaluated directly over eligible trips using continuous linear interpolation (`quantile_cont`). Daily quantiles are never averaged across dates or zones.
-5. **Atomic Publication & Recovery**: Releases are published via atomic compare-and-swap (CAS) on generation counters. Process kills during staging, rename, or post-commit recover idempotently without duplicate generations or partial database exposure.
-6. **Option A Retention Policy ([ADR 0006](docs/architecture/decisions/0006-amend-release-retention-to-option-a.md))**: The platform maintains the current analytical release plus exactly 1 prior analytical release (2 analytical releases total). Older databases are safely unlinked to reclaim storage while audit manifests (`manifest.json`) and validation receipts (`validation.json`) are preserved permanently. Total storage is strictly bounded within $\le 80.0\text{ GiB}$ (`20.75 GiB` active 2-month footprint with `59.25 GiB` headroom; $\sim 22.6\text{ GiB}$ safe headroom at full 12-month scale).
+Processed and audited end-to-end across **41,474,517 official trip records** (`2024-12` and `2025-01`), bridging the 2025 NYC Congestion Pricing **24-to-25 column schema transition** with zero silent coercion, `0` uncheckpointed WAL files, `0` spill files, and `229` passing automated gate and adversarial tests.
 
 ---
 
-## 2. Platform Verification & Certification Status
+## Architecture
 
-All 7 staged gates (`G0` through `G6`), 26 architectural requirements (`R01`–`R26`), and 29 verification scenarios (`T01`–`T29`) have been fully implemented, tested, and certified with genuine automated execution evidence (`229/229` `pytest` tests passing and `108/108` gate runner assertions passing) plus real official NYC TLC multi-month dataset execution (`41,474,517` trips across `2024-12` and `2025-01`).
+```mermaid
+flowchart LR
+    TLC[Official NYC TLC Parquet & Zones] -->|HTTPS + SHA-256 + PyArrow Decode| Raw[Immutable Content-Addressed Raw Store]
+    Raw -->|Writer Lock + Frozen Input Plan| Duck[DuckDB 2.0 Candidate Build]
+    Duck -->|SQL Models + Type 7 Quantiles + S01-S08 & Q01-Q09| Gate{Pre/Post-Seal Gate}
+    Gate -->|FAIL| Preserve[Retain Active Release]
+    Gate -->|PASS -> Checkpoint & Zero-WAL Seal| Release[Immutable Analytical DuckDB Release]
+    Control[(SQLite Control Registry)] <-->|CAS Generation Swap + Option A Retention| Release
+    Release -->|Read-Only + Query Lock + Out-of-Cache Guard| UI[Streamlit Analytical Console]
+    Dagster[Dagster 1.13 Orchestration] -.->|Schedules, Lineage & Asset Checks| Duck
+```
 
-| Gate | Milestone | Acceptance Criteria | Tests Executed | Status |
-| :--- | :--- | :--- | :--- | :--- |
-| **G0** | Compatibility & Dependency Lock | Python 3.14, SQLite pragmas, POSIX locking, DuckDB 2.0.0 & PyArrow 26.0.1 | 28 / 28 PASS | **CERTIFIED PASS** |
-| **G1** | Trustworthy Acquisition & Control | Bounded HTTP streaming, raw provenance, RFC 8785 canonical hashes, 15-table SQLite control plane | 31 / 31 PASS | **CERTIFIED PASS** |
-| **G2** | Monthly Vertical Slice & Quality | Real Dec 2024 (`21,068,851` rows) & Jan 2025 (`20,405,666` rows) TLC Parquet, S01–S07, Q01–Q09, 0-byte post-checkpoint WAL | 18 / 18 PASS | **CERTIFIED PASS** |
-| **G3** | Publication Safety & Durability | Candidate finalization, Rule S08 digest check, atomic CAS publication, crash recovery, SQLite online backup | 14 / 14 PASS | **CERTIFIED PASS** |
-| **G4** | Scale & Option A Retention | Incremental vs full rebuild equivalence, writer lock contention, 80 GiB budget preflight, Option A retention ([ADR 0006](docs/architecture/decisions/0006-amend-release-retention-to-option-a.md)) | 5 / 5 PASS | **CERTIFIED PASS** |
-| **G5** | Consumer & Operations | Streamlit Reliability & Intervals views, out-of-cache eligibility, query.lock, bounded LRU cache, Dagster asset checks & gaps scan | 12 / 12 PASS | **CERTIFIED PASS** |
-| **G6** | Portfolio Evidence & Walkthrough | Independent requirement audit (`R01`–`R26`), real 2-month NYC TLC execution (`41,474,517` rows), full `pytest` suite (`229/229` PASS) | 229 / 229 PASS | **CERTIFIED PASS** |
+### Core Engineering Design
 
-### Real Official NYC TLC Dataset Execution Summary (`.data/real_tlc_execution_receipt.json`)
-- **`tlc/taxi_zones` (`taxi_zone_lookup.csv`)**: `265` rows, `12,331` bytes, SHA-256 `1a99e105092230f8620f301edcca7f80d3080642ff404d28ed957d3fa222c8ed`
-- **`tlc/hvfhv/2024-12` (`fhvhv_tripdata_2024-12.parquet`)**: `21,068,851` rows, `507,534,115` bytes (`hvfhv_24col_pre2025.v1`), SHA-256 `dcf0885722bc76ab7b5f22a23b784513caf7e7c2b23381ed854610c436c48887`
-- **`tlc/hvfhv/2025-01` (`fhvhv_tripdata_2025-01.parquet`)**: `20,405,666` rows, `491,076,642` bytes (`hvfhv_25col_2025onward.v1`), SHA-256 `fcdef276f4e9887f2beab30590165cdea74caef50a1313d71fa01ff6afacca3a`
-- **Release 1 (`rel_2024_12_3f8bf865`, Generation 1)**: `21,068,851` trips (`20,817,586` eligible, `251,265` negative, `0` missing; `p50 = 268.0s`, `p95 = 716.0s`; DuckDB size `992.76 MiB`, build wall time `20.61s`, peak RSS `6,227.20 MB`).
-- **Release 2 (`rel_2024_12_2025_01_f2d153b3`, Generation 2)**: `41,474,517` trips across `2024-12` and `2025-01` (`41,023,464` eligible, `451,053` negative, `0` missing; `p50 = 249.0s`, `p95 = 666.0s`; DuckDB size `1,957.76 MiB`, build wall time `32.63s`, peak RSS `7,634.23 MB`; `cbd_congestion_fee` `NULL` on all `21,068,851` `2024-12` rows and populated on all `20,405,666` `2025-01` rows with `14,105,454` zero and `6,300,212` positive up to `$3.00`).
+- **Atomic Publication & Recovery (`hvfhv.control`)**: SQLite (`DELETE` journal mode, `synchronous=EXTRA`, `foreign_keys=ON`) is the single publication authority. Releases are sealed cleanly (`CHECKPOINT`, zero WAL residual), hashed (`analytics.duckdb`, `manifest.json`, `validation.json`), and activated via compare-and-swap (`expected_parent`, `expected_generation`, idempotent `operation_key`). POSIX `fcntl.flock` serializes writers (`writer.lock`) and bounds concurrent readers (`query.lock`).
+- **80 GiB Budget & Option A Retention ([ADR 0006](docs/architecture/decisions/0006-amend-release-retention-to-option-a.md))**: Measured 12-month projections showed that retaining 4 full-window DuckDB snapshots (`current` + `2` prior + `1` staging candidate) would reach `~98.13 GiB` and breach the `80.0 GiB` workstation cap. Under Option A, the retention engine protects `current` + `1` prior verified database (`~20.75 GiB` measured on 2 months; `~57–63 GiB` at 12 months) and performs audited retirement of older `.duckdb` binaries while preserving cryptographic manifests and raw Parquet files for deterministic rebuilds.
+- **Cross-Year Schema Evolution (`24 → 25` Columns)**: `hvfhv_24col_pre2025.v1` (`2024-12`) lacks `cbd_congestion_fee`, whereas `hvfhv_25col_2025onward.v1` (`2025-01+`) introduces it. The transform layer tracks `cbd_fee_field_present` explicitly so pre-2025 `NULL` values are never silently coerced to `$0.00`.
+- **Exact Analytics & Semantic Honesty**:
+  - **Interval Identity**: $\text{total} = \text{eligible\_nonnegative} + \text{negative\_recorded\_interval} + \text{missing\_timestamp}$ holds across all views.
+  - **Exact Type 7 Quantiles**: `p50` and `p95` are evaluated via DuckDB `quantile_cont` directly on eligible observations (`64-bit` microsecond integer delta), never averaged across daily or zonal subgroups.
+  - **Out-of-Cache Consumer Guard**: Streamlit's bounded LRU cache (`32` entries / `5 MiB` cap) verifies release eligibility against SQLite **before and after** every read so a `REJECTED` or `RETIRED` release is blocked immediately.
 
 ---
 
-## 3. Directory Layout
+## Verified Real-Data Benchmarks (41.47M Official Trips)
 
-```
-.
-├── contracts/                        # Frozen schemas, pre-seal rules, and metric inventories
-│   ├── rules.json                    # S01–S08 rules, Q01–Q09 semantic profiles
-│   └── schemas.json                  # Source schema adapters (pre-2025, 2025+)
-├── docs/                             # Architecture records, decisions, requirements, evidence
-│   ├── architecture/                 # arc42 architectural documentation & ADRs
-│   ├── requirements.md               # R01–R26 requirements matrix
-│   └── verification/
-│       ├── execution-log.md          # Chronological execution receipts across all gates
-│       └── gate2_pause_report.md     # Gate G2 pause review report
-├── src/hvfhv/                        # Core application implementation
-│   ├── acquisition/                  # Bounded streaming download & raw acceptance
-│   │   ├── acquire.py
-│   │   └── discover.py
-│   ├── config.py                     # System configuration & filesystem layout
-│   ├── consumer/                     # Read-only consumer interfaces
-│   │   ├── app.py                    # Streamlit analytical dashboard & headless runner
-│   │   └── reader.py                 # Pinned release reader, LRU cache, out-of-cache checks
-│   ├── contracts/                    # RFC 8785 canonical JSON & hash identity
-│   │   └── identity.py
-│   ├── control/                      # SQLite control plane, advisory locks, publication CAS
-│   │   ├── locks.py                  # POSIX advisory flock (writer.lock, query.lock)
-│   │   ├── publication.py            # Finalization, post-seal verification, CAS publication
-│   │   └── registry.py               # 15 relational tables, state machines, migrations
-│   ├── orchestration/                # Dagster orchestration adapters & frontier gap scanner
-│   │   └── defs.py
-│   └── transforms/                   # Ingestion, SQL analytical models, quality engine
-│       ├── builder.py                # Full rebuild, incremental build, Option A retention
-│       ├── ingest.py                 # PyArrow streaming batch reader & DuckDB writer
-│       └── quality.py                # Quality engine evaluating S01–S07 and Q01–Q09
-└── tests/                            # Comprehensive automated acceptance suites
-    ├── gate0_compatibility/          # G0: Environment, pragmas, advisory locks, DuckDB/Arrow
-    ├── gate1_acquisition/            # G1: Discovery, HTTP errors, provenance, control plane
-    ├── gate2_monthly_slice/          # G2: Real monthly slice, interval arithmetic, quantiles
-    ├── gate3_publication_safety/     # G3: Crash recovery, atomic rollback, CAS concurrency
-    ├── gate4_scale/                  # G4: Rebuild equivalence, Option A retention, 80GB budget
-    └── gate5_consumer/               # G5: Streamlit queries, cache bounds, frontier gaps
+Measured against official NYC TLC releases (`fhvhv_tripdata_2024-12.parquet`, `fhvhv_tripdata_2025-01.parquet`, and `taxi_zone_lookup.csv`) on local SSD hardware:
+
+| Metric / Stage | Release 1 (`2024-12` Single Month) | Release 2 (`2024-12` + `2025-01` Window) |
+| :--- | :---: | :---: |
+| **Total Trips Ingested** | `21,068,851` | `41,474,517` |
+| **Interval Partition** | `20,817,586` eligible / `251,265` negative / `0` missing | `41,023,464` eligible / `451,053` negative / `0` missing |
+| **Eligible Wait Quantiles (Type 7)** | `p50 = 268.0s` / `p95 = 716.0s` | `p50 = 249.0s` / `p95 = 666.0s` |
+| **Build Wall Time** | `20.61s` | `32.63s` (incremental) |
+| **Peak Process RSS** (`<= 8,192 MB` cap) | `6,227.20 MB` | `7,634.23 MB` |
+| **Released DuckDB Size** | `992.76 MiB` (`0` WAL, `0` spill) | `1,957.76 MiB` (`0` WAL, `0` spill) |
+| **Total Footprint (`<= 80 GiB` cap)** | — | `20.75 GiB` (`59.25 GiB` headroom, Option A) |
+| **Read-Only Consumer Query Time** | — | `1.923s` (cold headless `ReleaseReader`) |
+| **Dagster Asset Checks & Frontier** | `17 / 17` PASS | `17 / 17` PASS (`SYNCHRONIZED`) |
+
+> **CBD Fee Transition Observed (`S02` / `Q06`)**: Across `20,405,666` trips in `2025-01`, `14,105,454` recorded `$0.00` and `6,300,212` recorded positive Congestion Relief fees up to `$3.00` (`p95 = $1.50`), while all `21,068,851` rows in `2024-12` retain explicit `NULL` (`cbd_fee_field_present = false`).
+
+---
+
+## Tech Stack
+
+- **Analytical Compute**: DuckDB `2.0.0`, PyArrow `26.0.1`
+- **Control Plane & Locking**: SQLite `3.50+` (`DELETE` journal, `synchronous=EXTRA`, FK enforcement), POSIX `fcntl.flock`
+- **Orchestration & Lineage**: Dagster `1.13.30`, `dagster-webserver` `1.13.30`
+- **Acquisition & Telemetry**: `httpx` `0.28.1` (TLS + bounded retries + SSRF allowlist), `psutil` `7.2.2`
+- **Presentation**: Streamlit `1.67.0`
+- **Verification**: `pytest` `9.2.0` (`229` gate & adversarial stress tests)
+
+---
+
+## Repository Layout
+
+```text
+├── .github/workflows/ci.yml   # Automated CI workflow running the full pytest suite
+├── contracts/                 # JSON schema contracts & validation rules (S01-S08, Q01-Q09)
+├── sql/                       # DuckDB analytical models & continuous quantile profiles
+├── src/hvfhv/
+│   ├── acquisition/           # HTTPS acquisition, SHA-256 verification, PyArrow decode, frontier scan
+│   ├── consumer/              # Read-only DuckDB reader, LRU guard & Streamlit dashboard
+│   ├── contracts/             # RFC 8785 canonical JSON & deterministic derivation hashing
+│   ├── control/               # SQLite registry, POSIX locks, CAS publication & Option A retention
+│   ├── orchestration/         # Dagster assets, schedules, gap-aware sensors & asset checks
+│   └── transforms/            # DuckDB ingestion, 24->25 col adaptation, quality engine & builder
+├── scripts/
+│   └── run_real_tlc_pipeline.py  # End-to-end acquisition & publication runner for official NYC TLC files
+├── tests/                     # 229 automated tests across Gates G0-G5 (unit, recovery, adversarial)
+├── docs/                      # Architecture (arc42/ADRs), data contracts, operations & execution logs
+├── references/                # Preserved schema inspection profiles from NYC TLC source evaluation
+├── pyproject.toml             # Package metadata & pytest configuration
+└── requirements.lock          # Pinned dependency lockfile
 ```
 
 ---
 
-## 4. Quickstart & Verification Commands
+## Quickstart
 
-### Environment Setup
-The platform requires Python 3.11+ (verified on CPython 3.14.3 macOS Apple Silicon).
+### 1. Create Environment & Install Locked Dependencies
+
+Requires Python `3.11`–`3.14`:
+
 ```bash
-# Run unified pytest suite across all gates and adversarial challenger suites (229 tests)
-PYTHONPATH=src:. .venv/bin/pytest -q
-
-# Set Python path to include source tree
-export PYTHONPATH=src
-
-# Run complete system regression across individual gate runners (108 tests)
-.venv/bin/python3 tests/gate0_compatibility/run_gate0_tests.py
-.venv/bin/python3 tests/gate1_acquisition/run_gate1_tests.py
-.venv/bin/python3 tests/gate2_monthly_slice/run_gate2_tests.py
-.venv/bin/python3 tests/gate3_publication_safety/run_gate3_tests.py
-.venv/bin/python3 tests/gate4_scale/run_gate4_tests.py
-.venv/bin/python3 tests/gate5_consumer/run_gate5_tests.py
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.lock
+pip install --no-deps -e .
 ```
 
-### Running Individual Gate Suites
+### 2. Run the Full Automated Verification Suite
+
 ```bash
-# Gate G0: Environment, SQLite durability pragmas, and POSIX advisory locking
-PYTHONPATH=src .venv/bin/python3 tests/gate0_compatibility/run_gate0_tests.py
-
-# Gate G1: Acquisition, HTTP network fault injection, and SQLite control plane
-PYTHONPATH=src .venv/bin/python3 tests/gate1_acquisition/run_gate1_tests.py
-
-# Gate G2: Real monthly vertical slice, continuous quantiles, and pre-seal quality engine
-PYTHONPATH=src .venv/bin/python3 tests/gate2_monthly_slice/run_gate2_tests.py
-
-# Gate G3: Publication safety, CAS concurrency, crash injection, and SQLite online backup
-PYTHONPATH=src .venv/bin/python3 tests/gate3_publication_safety/run_gate3_tests.py
-
-# Gate G4: Incremental rebuild equivalence, lock contention, and Option A retention cleanup
-PYTHONPATH=src .venv/bin/python3 tests/gate4_scale/run_gate4_tests.py
-
-# Gate G5: End-to-end consumer reader, out-of-cache eligibility, and frontier gap scanner
-PYTHONPATH=src .venv/bin/python3 tests/gate5_consumer/run_gate5_tests.py
+pytest -q
 ```
 
-### Running the Read-Only Consumer Dashboard
+Expected result: all **`229` tests pass** (`0` skipped, `0` failed) across Gates `G0`–`G5`, covering environment pragmas, network fault injection, schema tampering, DuckDB `CHECKPOINT` invariants, POSIX lock contention, CAS conflict storms, crash-state reconciliation, and Streamlit UI rendering.
+
+*(Runtime state defaults to `<repo>/.data` and can be relocated via `export HVFHV_DATA_ROOT=/path/to/data`.)*
+
+### 3. Execute the Real NYC TLC Pipeline
+
+Download official monthly Parquet files (`taxi_zone_lookup.csv`, `2024-12`, `2025-01`), build verified DuckDB releases, and publish atomically via SQLite CAS:
+
 ```bash
-# Launch interactive Streamlit dashboard on local loopback
-PYTHONPATH=src .venv/bin/streamlit run src/hvfhv/consumer/app.py
+PYTHONPATH=src:. python scripts/run_real_tlc_pipeline.py
+```
 
-# Or execute headless consumer summary for automated inspection
-PYTHONPATH=src .venv/bin/python3 -c "
-from hvfhv.consumer.reader import ReleaseReader
-from hvfhv.consumer.app import render_headless_summary
-from hvfhv.config import resolve_data_root
+*(Note: downloads ~`1.0 GB` of official NYC TLC data into `.data/raw/sha256/`.)*
 
-reader = ReleaseReader(data_root=resolve_data_root())
-summary = render_headless_summary(reader)
-print('Current Release:', summary['reliability']['release_id'])
-print('Total Trips:', summary['intervals']['denominators']['total_population_count'])
-print('Median Interval:', summary['intervals']['denominators']['median_seconds'], 's')
-"
+### 4. Launch Local UIs (Loopback)
+
+**Streamlit Read-Only Analytical Console (`http://127.0.0.1:8501`)**:
+
+```bash
+PYTHONPATH=src:. streamlit run src/hvfhv/consumer/app.py \
+  --server.address 127.0.0.1 --server.port 8501 \
+  --server.headless true --browser.gatherUsageStats false
+```
+
+**Dagster Asset Lineage & Checks UI (`http://127.0.0.1:3000`)**:
+
+```bash
+PYTHONPATH=src:. DAGSTER_HOME="$PWD/.data/orchestrator" \
+  dagster dev -f src/hvfhv/orchestration/defs.py -h 127.0.0.1 -p 3000
 ```
 
 ---
 
-## 5. Explicit Disclosures & Domain Invariants
-- **Naive Interval Arithmetic**: Recorded request-to-pickup seconds are computed from timestamps as recorded by high-volume dispatchers without timezone manipulation.
-- **Non-SLA Disclaimer**: The platform measures recorded vehicle request-to-pickup interval; it does not claim to represent customer waiting time, fleet availability, or dispatcher SLA adherence.
-- **Data Boundary**: Local file data is stored strictly in `$DATA_ROOT` (`.data/` within project root, gitignored). Under Option A retention, analytical storage is capped under 80 GiB.
-- **Local Git Repository Boundary**: All commits are made strictly to the local repository (`main` branch); no remote publishing or unauthorized external data transmission is performed.
+## Verification & Documentation Index
+
+| Gate / Document | Focus | Link |
+| :--- | :--- | :--- |
+| **G0–G6 Verification Matrix** | Acceptance scenarios (`T01`–`T29`) and evidence tiers | [Acceptance Plan](docs/verification/acceptance-plan.md) |
+| **Empirical Execution Log** | Real TLC SHA-256 digests, telemetry, and test logs | [Execution Log](docs/verification/execution-log.md) |
+| **Architecture & ADRs** | System boundaries, SQLite schema, ADRs `0001`–`0006` | [Architecture Overview](docs/architecture/overview.md) |
+| **Data & Quality Contracts** | Rule inventory (`S01`–`S08`, `Q01`–`Q09`) & interval definitions | [Data Contracts](docs/reference/data-contracts.md) |
+| **Resource Checkpoint** | 12-month storage capacity analysis & Option A rationale | [Gate 2 Report](docs/verification/gate2_pause_report.md) |
+
+---
+
+## Domain Scope & Limitations
+
+- **Recorded Request-to-Pickup Interval != Customer Wait Time**: NYC TLC trip records reflect provider-reported naive timestamps (`request_datetime` to `pickup_datetime`); timezone localization and unrecorded app-dispatch behavior remain external to the source files. Both UI views and SQL outputs surface this boundary explicitly.
+- **Process Crash vs. Power Loss**: File-locking (`fcntl.flock`), SQLite rollback (`synchronous=EXTRA`), and release publication tests validate process kills (`SIGKILL`) and partial-write recovery; raw hardware power-loss guarantees remain explicitly outside workstation scope.
+
+---
+
+## License
+
+Source code and documentation in this repository are licensed under the [MIT License](LICENSE). Official NYC TLC trip datasets acquired at runtime remain subject to [NYC Open Data](https://opendata.cityofnewyork.us/) and NYC Taxi & Limousine Commission terms of use and are excluded from version control.

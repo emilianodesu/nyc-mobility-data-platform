@@ -16,8 +16,4 @@ For September 2026, the first 20,000 projected rows of physical row group 10 con
 
 These findings motivate preserving values, typed exceptions, schema-version handling and explicit denominator reporting. They do not justify automatic deduplication, timestamp repair, a driver-income model or claims of true customer waiting time. There was no throughput benchmark, full-year data load or production deployment.
 
-Research source records remain preserved privately with capture timestamps, ETags and methods. The transfer manifest records hashes of the consulted evidence summaries/records without copying personal context or agent-session files. The public URLs and stated methods make this package understandable without accessing CareerBooster.
-
-[Official sources and limitations](source-register.md)
-
-The augmented ZIP also preserves those detailed records in [the research archive](../../references/README.md); the curated summary is no longer the only transferred evidence.
+Public NYC TLC URLs and documented inspection methods make all schema and domain assumptions independently reproducible from [Official sources and limitations](source-register.md) and [the research archive](../../references/README.md).

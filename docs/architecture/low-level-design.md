@@ -1,12 +1,10 @@
 # HVFHV — Low-level design v1
 
-Date: 2026-11-09. Status: design, not implemented or experimentally validated. Refines [Architecture v1](overview.md). Professional documentation is in English; no source-of-truth career claim is created. The original prototype remains deleted.
-
-Companion specifications: [data and quality contracts](../reference/data-contracts.md), [verification and implementation gates](../verification/acceptance-plan.md).
+Refines [Architecture v1](overview.md). Companion specifications: [data and quality contracts](../reference/data-contracts.md), [verification and implementation gates](../verification/acceptance-plan.md).
 
 ## 1. System boundary and layout
 
-The following is a proposed standalone project layout, not directories created by this design task. It must not share CareerBooster's environment, private profile or registry.
+The repository follows a self-contained modular layout under `src/hvfhv/`, with runtime state strictly isolated in a configurable local `$DATA_ROOT` (defaulting to `.data/` inside the project root, gitignored):
 
 | Proposed path | Responsibility |
 | --- | --- |
@@ -74,7 +72,7 @@ Registry migration: acquire writer lock, back up via SQLite backup API, validate
 
 ## 4. Application operations and orchestration
 
-Interfaces below are contracts, not implemented CLI commands.
+Canonical application contracts implemented under `src/hvfhv/`:
 
 | Operation | Inputs → outputs | Failure/retry contract |
 | --- | --- | --- |

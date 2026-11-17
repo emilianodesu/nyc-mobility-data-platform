@@ -1,31 +1,29 @@
-# Documentation index
+# Project Documentation
 
-## Understand the project
+Documentation for the **HVFHV Monthly Data Reliability Platform** is organized by architectural overview, contracts, verification evidence, and source research.
 
-- [Requirements](requirements.md): scope, terminology and acceptance traceability.
-- [Architecture](architecture/overview.md) and [diagrams](architecture/diagrams.md).
-- [Decision records](architecture/decisions/README.md): reasons, alternatives and consequences.
-- [Source research](evidence/source-research.md) and [source register](evidence/source-register.md).
+## Architecture & Decisions
 
-## Implement against a defined contract later
+- [Architecture overview](architecture/overview.md): System scope, technology stack, responsibility boundaries, and recovery guarantees.
+- [Low-level design](architecture/low-level-design.md): Module boundaries, identity model, SQLite control schema, and storage layout.
+- [Architecture diagrams](architecture/diagrams.md): Context, publication sequence, and model lineage diagrams.
+- [Architecture decision records](architecture/decisions/README.md): Formal ADRs (`0001`–`0006`), including [ADR 0006 (Option A Retention)](architecture/decisions/0006-amend-release-retention-to-option-a.md).
+- [arc42 index](architecture/arc42-index.md): Cross-reference across architectural viewpoints.
+- [Deployment context](architecture/deployment-context.md): Local process and storage boundaries.
+- [Risk & uncertainty register](architecture/risks.md): Mitigations and acceptance closure evidence.
 
-- [Low-level design](architecture/low-level-design.md).
-- [Data contracts](reference/data-contracts.md).
-- [Interfaces and operational runbooks](reference/interfaces-and-operations.md).
-- [Implementation sequence](delivery/implementation-sequence.md).
+## Requirements & Contracts
 
-## Assess evidence and readiness
+- [Requirements & traceability](requirements.md): System invariants `R01`–`R26` mapped to ownership and verification.
+- [Data & quality contracts](reference/data-contracts.md): Canonical schemas, adapters (`24-col` and `25-col`), interval definitions, and rule inventory (`S01`–`S08`, `Q01`–`Q09`).
+- [Operations design](reference/interfaces-and-operations.md): Control-plane operations, lock discipline, and failure recovery contracts.
+- [Glossary](reference/glossary.md): Core domain and storage definitions.
 
-- [Acceptance scenarios](verification/acceptance-plan.md).
-- [Design review](verification/design-review.md).
-- [Technical readiness](verification/technical-readiness.md).
-- [Manual walkthrough results](verification/walkthrough-results.md).
-- [Review checklist](verification/review-checklist.md).
-- [Completed package review](verification/package-review.md): scope, checks and remaining runtime work.
-- [Transfer policy](delivery/repository-handoff.md) and [package manifest](delivery/package-manifest.json).
+## Verification & Source Research
 
-Architecture explains choices; reference specifies behavior; runbooks explain proposed operation; verification reports what is and is not proven. There is no fabricated executable tutorial. Snapshot files are maintained in the original definition workspace until an explicit transfer to a clean project.
-
-Portable entry point: [START-HERE](../START-HERE.md). Full research preservation: [archive](../references/README.md).
-
-Researched structure: [rationale](delivery/structure-research.md), [arc42 coverage](architecture/arc42-index.md), [risks](architecture/risks.md), [glossary](reference/glossary.md).
+- [Verification & acceptance plan](verification/acceptance-plan.md): Evidence tiers, scenario suite `T01`–`T29`, and milestone gates `G0`–`G6`.
+- [Execution log](verification/execution-log.md): Empirical gate certifications and full-scale NYC TLC execution records.
+- [Gate 2 resource checkpoint](verification/gate2_pause_report.md): Vertical slice benchmarks and 80 GiB storage capacity analysis.
+- [Technical readiness & numerical oracles](verification/technical-readiness.md): Dependency constraints and hand-calculated Type 7 quantile oracles.
+- [Source research summary](evidence/source-research.md) & [source register](evidence/source-register.md): Official NYC TLC metadata and structural observations.
+- [Research archive](../references/README.md): Historical TLC and zone lookup inspection records.

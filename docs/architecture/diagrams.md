@@ -17,7 +17,7 @@ flowchart LR
     Worker -->|Short control transactions| Registry[SQLite selection and audit registry]
     Reader[Streamlit read-only consumer] -->|Pin identity and eligibility| Registry
     Reader -->|Read verified selected release| Releases
-    Reviewer[Fictional consumer or technical reviewer] --> Reader
+    Reviewer[Mobility analyst or technical reviewer] --> Reader
 ```
 
 The control registry is the single current-release authority. Dagster metadata is scheduling/run history; it is not a second selection pointer. All processes run locally; external traffic is source acquisition. Services are intended for loopback, with no public deployment in v1.
@@ -60,4 +60,4 @@ flowchart TD
 
 Source revision changes replace their contribution. Reference/rule/metric changes invalidate documented dependents. Recomputing aggregate relations after incremental ingestion is intentional. No computed percentile is merged from subgroup percentiles.
 
-Diagrams have been inspected as source text; rendering must be checked in the chosen future documentation viewer. They do not show every exception; consult the operations runbooks for failure paths.
+These diagrams summarize runtime responsibilities, publication sequence, and model lineage; consult the operations design for full failure-recovery paths.

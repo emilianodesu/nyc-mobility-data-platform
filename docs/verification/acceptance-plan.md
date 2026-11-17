@@ -1,6 +1,6 @@
 # HVFHV — Verification and implementation gates v1
 
-Date: 2026-11-09. This is a future execution specification. No tests below have run, no pipeline exists from this task, and no deployment is authorized by this document. Parent: [low-level design](../architecture/low-level-design.md); rules: [data contracts](../reference/data-contracts.md).
+Verification specification covering evidence tiers, acceptance scenarios `T01`–`T29`, and milestone gates `G0`–`G6`. Empirical runtime measurements and passing test outcomes are recorded in [execution log](execution-log.md). Parent: [low-level design](../architecture/low-level-design.md); rules: [data contracts](../reference/data-contracts.md).
 
 ## 1. Evidence tiers
 
@@ -51,13 +51,13 @@ Process kill tests are not power-cut tests. Assert only demonstrated crash class
 
 | Gate | Deliverable | Required evidence before proceeding |
 | --- | --- | --- |
-| G0 — compatibility | Dedicated environment and exact dependency lock, supported host tuple | Clean install/imports, DuckDB Arrow ingestion/checkpoint/readonly support, Dagster local job and Streamlit launch; verify Python support from package metadata, do not reuse CareerBooster Python by assumption |
+| G0 — compatibility | Dedicated environment and exact dependency lock, supported host tuple | Clean install/imports, DuckDB Arrow ingestion/checkpoint/readonly support, Dagster local job and Streamlit launch; verify Python support from package metadata |
 | G1 — trustworthy acquisition | Source manifests, registry, bounded HTTP and provenance | T01–T07 and T29 on fixtures and real reference schemas; no consumer/publication yet |
 | G2 — monthly vertical slice | Full monthly raw → model → profiles → candidate metrics | Complete row reconciliation; real negative/null/zone findings; T08–T12; CPU/time/RSS/disk measurement |
 | G3 — publication safety | Frozen releases, selection transaction, recovery/rollback | T14–T20, T24 and T26 with independent failure injection; exact untested durability boundaries recorded |
 | G4 — scale and incremental correctness | Source revision replacement, full rebuild comparison and 12-month plan | T13/T15/T22; measure current+two retained releases plus candidate/spill under 80 GiB; amend architecture if infeasible |
 | G5 — end-to-end consumer | Read-only reliability and interval views, on-demand and scheduled operations | T21/T23/T25/T27/T28, exact query denominator checks, local review of both views and reproducible instructions |
-| G6 — portfolio evidence | Decision records, measurements, lineage examples, failure/recovery walkthrough | Independent acceptance report, all unresolved findings visible, user explanation of decisions separate from agent contribution |
+| G6 — release & audit evidence | Decision records, measurements, lineage examples, failure/recovery walkthrough | Complete requirement audit (`R01`–`R26`), real-object verification, and reproducible execution logs |
 
 Do not build infrastructure or write broad test suites before G0 confirms compatibility and G1/G2 ground behavior in actual inputs. Tests are targeted to specified invariants alongside implementation. No public hosting, repository archival, automatic publishing or new services are part of these gates.
 

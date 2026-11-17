@@ -1,6 +1,6 @@
 # 0006 — Amend retained analytical release policy to Option A (current plus one prior verified release)
 
-Status: accepted amendment (user-approved at Gate G2 pause checkpoint). Date: 2026-11-11; formalized: 2026-11-16. Amends: [0002](0002-local-native-analytical-storage.md), [0003](0003-immutable-releases-and-selection.md). Requirements: R17, R20, R22. Scenarios: T19, T22, T27.
+Status: accepted amendment (Gate G2 capacity checkpoint). Date: 2026-11-11; formalized: 2026-11-16. Amends: [0002](0002-local-native-analytical-storage.md), [0003](0003-immutable-releases-and-selection.md). Requirements: R17, R20, R22. Scenarios: T19, T22, T27.
 
 ## Context
 
@@ -8,7 +8,7 @@ The initial baseline specification (`R17`, [low-level design §7](../low-level-d
 
 At the Gate G2 empirical checkpoint ([Gate G2 pause report](../../verification/gate2_pause_report.md)), extrapolated 12-month native DuckDB analytical storage (`~20.4 GiB` per full 12-month release) showed that holding `4` simultaneous full-window DuckDB copies plus `16.0 GiB` spill and raw data requires `~98.13 GiB` (or `~104 GiB` with 6 GiB raw Parquet), exceeding the `80.0 GiB` cap by `18.13–24.0 GiB`.
 
-Per project rules (`AGENTS.md` and `R20`), resource limits must never be passed by silently downsampling rows, truncating the 12-month analytical window, or weakening quality/quantile semantics. Instead, `0002` and `0003` explicitly established a revisit trigger if native snapshot storage exceeded the `80.0 GiB` budget.
+Per project invariant `R20`, resource limits must never be passed by silently downsampling rows, truncating the analytical window, or weakening quality/quantile semantics. Instead, `0002` and `0003` explicitly established a revisit trigger if native snapshot storage exceeded the `80.0 GiB` budget.
 
 ## Decision
 

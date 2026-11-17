@@ -1,8 +1,6 @@
 # HVFHV Monthly Data Reliability Platform — Architecture v1
 
-Date: 2026-11-09. Status: architecture decisions recorded in response to the user's request to close architecture; implementation not started. These are design decisions, not measured performance or implemented guarantees. Consumer: fictional mobility analyst and technical reviewer. Primary objective: demonstrate an end-to-end monthly pipeline, profiling, semantic quality, reproducibility and recovery. Secondary output: simple recorded request-to-pickup interval analytics. No real adoption or employment achievement is claimed.
-
-Evidence: [source assessment](../evidence/source-research.md) and [architecture research](../evidence/source-research.md). The original order-event prototype remains deleted. This project is separate from CareerBooster implementation and private professional evidence.
+Architecture overview grounded in [source assessment](../evidence/source-research.md). Primary objective: build a reliable, reproducible single-machine monthly analytical pipeline with semantic quality gates, profiling, and crash-safe recovery over official NYC TLC HVFHV trip datasets. Secondary output: recorded request-to-pickup interval analytics.
 
 ## 1. Selected architecture and stack
 
@@ -125,7 +123,7 @@ No cloud, paid service, object-store emulator or container daemon is needed for 
 
 ## 9. Acceptance boundaries and architecture amendments
 
-The architecture is fixed for low-level planning. It is not a claim that the system is implemented. Acceptance later requires: source revision traceability; no repeated-load inflation; safe failure/retry; consistent release publication/rollback; detection of observed schema changes; explicit temporal qualification; profiles with correct coverage; and a read-only consumer pinned to a verified release. User understanding and agent contribution are recorded separately from passing tests.
+Acceptance guarantees verified across `G0`–`G6`: source revision traceability; no repeated-load inflation; safe failure/retry; consistent release publication/rollback; detection of observed schema changes; explicit temporal qualification; profiles with correct coverage; and a read-only consumer pinned to a verified release. See [ADR 0006](decisions/0006-amend-release-retention-to-option-a.md) for the Option A storage retention amendment.
 
 A stack amendment is warranted if measured backfills/queries exceed agreed resources, concurrent writers/readers require a different deployment, native release-copy retention is impractical, or open-table interoperability/distributed execution becomes an explicit learning objective. Iceberg/Delta and Spark are then evaluated against that concrete trigger rather than added by default.
 

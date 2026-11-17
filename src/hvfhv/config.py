@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-DEFAULT_PROJECT_ROOT = Path("/Users/emilianodesu/Documents/Projects/hvfhv")
+DEFAULT_PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DATA_ROOT = DEFAULT_PROJECT_ROOT / ".data"
 
 
@@ -20,7 +20,7 @@ def resolve_data_root(custom_path: Path | str | None = None) -> Path:
     Precedence:
     1. Explicit custom_path argument
     2. HVFHV_DATA_ROOT environment variable
-    3. Default workspace .data path: /Users/emilianodesu/Documents/Projects/hvfhv/.data
+    3. Default workspace .data path: <project_root>/.data
     """
     if custom_path is not None:
         p = Path(custom_path).resolve()

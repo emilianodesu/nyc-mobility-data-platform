@@ -13,6 +13,6 @@ Status: open until the named evidence exists. No invented probabilities or measu
 | K07 | Research sample conclusions overstated | Preserve exact methods, metadata-vs-scan and nonrandom scope in archive | Reviewer / documentation and G2 |
 | K08 | Schema changes or unknown codes cause silent coercion | Named adapters, unknown-schema stop, typed semantic flags | Transform / G1,G2 |
 | K09 | Retired/rejected release served from cache | Registry eligibility outside cache, post-query check, audited cleanup | Consumer / G3,G5 |
-| K10 | Future agents follow superseded research or fabricate success | START-HERE authority rules, current ADRs, explicit NOT RUN scenarios and archive inventory | Maintainer / every handoff |
+| K10 | Stale documentation or unverified claims diverge from codebase | Authoritative ADRs, empirical execution logs, and automated gate tests | Repository maintainer |
 
-Technical debt is not claimed for code that does not yet exist. The deliberately deferred work is in G0–G6. Domain ambiguity may remain a documented product limitation even after engineering tests pass.
+Domain ambiguities (such as raw timestamp timezone conventions and on-scene definitions) remain documented limitations verified by explicit UI/query disclosures.

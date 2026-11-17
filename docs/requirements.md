@@ -1,16 +1,16 @@
 # HVFHV — Requirements and acceptance traceability
 
-Date: 2026-11-09. Status: specified, not implemented. Owner: future project maintainer. User intent: a real monthly end-to-end data engineering portfolio project demonstrating robustness, quality and profiling with a fictional consumer. No claim of business adoption, employment impact or user mastery follows from this specification.
+Specification for the **HVFHV Monthly Data Reliability Platform**, implemented and verified across acceptance gates `G0`–`G6`.
 
 ## Scope and terminology
 
-The business source is official NYC TLC HVFHV trip observations plus the official zone lookup. The problem addressed is reliable, reproducible preparation of changing public monthly data for inspection and simple recorded request-to-pickup analysis. A published trip file is not an exhaustive request stream. The operator and reviewer are project roles, not interviewed customers.
+The business source is official NYC TLC HVFHV trip observations plus the official zone lookup. The problem addressed is reliable, reproducible preparation of changing public monthly data for inspection and recorded request-to-pickup analysis. A published trip file is not an exhaustive request stream.
 
-Source month = object provenance. Event date = recorded pickup date. Observation time = when this system checked or captured upstream content. Revision = exact source bytes attached to a logical source. Derivation = frozen recipe and selected evidence. Release = immutable analytical artifacts. Publication = local selection of a release for consumption, distinct from publishing code or a website to the internet. Rejection = control-plane denial of further serving. Rollback = explicit selection of a retained verified release.
+Source month = object provenance. Event date = recorded pickup date. Observation time = when this system checked or captured upstream content. Revision = exact source bytes attached to a logical source. Derivation = frozen recipe and selected evidence. Release = immutable analytical artifacts. Publication = local selection of a release for consumption. Rejection = control-plane denial of further serving. Rollback = explicit selection of a retained verified release.
 
 ## Requirements
 
-`Txx` refers to [verification scenarios](verification/acceptance-plan.md); `Gx` to its implementation gates. A mapping establishes intended coverage, not a passed test. All runtime requirements remain UNVERIFIED.
+`Txx` refers to [verification scenarios](verification/acceptance-plan.md); `Gx` to its implementation gates. Verification evidence and runtime measurements are recorded in [execution log](verification/execution-log.md).
 
 | ID | Requirement / observable acceptance | Design owner | Acceptance evidence |
 | --- | --- | --- | --- |
@@ -37,9 +37,9 @@ Source month = object provenance. Event date = recorded pickup date. Observation
 | R21 | Schema migrations are versioned, backed up, checked and restorable without modifying released artifacts | Control | T24 |
 | R22 | Reproducibility includes exact environment, host, artifact identities and full-rebuild comparison; no untested speed or durability claim | Packaging / verification | G0–G6; T13, T16–T20, T24 |
 | R23 | All required capabilities run locally with free resources and no Docker/cloud dependency; both DE and AI/ML presentation must describe actual demonstrated work | Architecture / scope | Dependency/runtime inventory, G0/G6 review; AI/ML model is not required |
-| R24 | Public code/site publication is a separate user-reviewed action; source data bulk mirroring is not assumed | Handoff | Export content review; no remote or deployment in this stage |
-| R25 | Deliver a self-contained English documentation package for a future clean repository, with decisions, requirements, contracts, operations, evidence and acceptance plans | Documentation | Package file inventory, relative-link/hash audit and requirement-level review |
-| R26 | Current work creates documentation only; no flagship pipeline, executable schemas, container, application or repository initialization | Stage boundary | Written-file inventory and action record for this goal |
+| R24 | Separate local raw data acquisition from public source repository boundaries; bulk dataset mirroring is not assumed | Repository boundary | `.gitignore` rules, content hygiene |
+| R25 | Maintain self-contained English technical documentation with decisions, contracts, operations, evidence, and acceptance traceability | Documentation | Relative-link audit and contract traceability |
+| R26 | Enforce explicit gate boundaries and pinned dependencies before claiming behavioral compatibility or scale readiness | Packaging / gate discipline | `requirements.lock`, `pytest` gates `G0`–`G6` |
 
 ## Nonfunctional policy and limits
 
@@ -55,4 +55,4 @@ No live stream, CDC, multi-writer distributed database, real customer commitment
 
 ## Review and change policy
 
-User decisions in the conversation establish source/cadence/objective; assistant-authored technical defaults are labeled design decisions, not fabricated user approvals. Changing a rule or metric requires rationale, affected requirements/scenarios, compatibility impact and a new version. Changes to source meaning or stack require an ADR amendment. Runtime evidence records exact versions; it never retrospectively turns an unexecuted scenario into PASS.
+All architectural parameters, source policies, and metric rules are versioned in ADRs and data contracts. Changing a rule or metric requires rationale, affected requirements/scenarios, compatibility impact, and an updated version. Changes to source meaning or stack require an ADR amendment (e.g., [ADR 0006](architecture/decisions/0006-amend-release-retention-to-option-a.md)). Runtime evidence records exact versions and measured outputs directly.

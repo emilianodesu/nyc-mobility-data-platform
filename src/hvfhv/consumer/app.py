@@ -84,12 +84,11 @@ def main():
             meta = summary.get("metadata", {})
             ops = summary.get("operational_state", {})
 
+            cov_rows = summary.get("coverage", [])
+            window_label = f"{meta.get('first_source_month', 'N/A')} → {meta.get('last_source_month', 'N/A')}"
             col1, col2, col3, col4 = st.columns(4)
             col1.metric("Current Generation", str(ops.get("current_generation", "N/A")))
-            col2.metric(
-                "Window Covered",
-                f"{meta.get('first_source_month', 'N/A')} → {meta.get('last_source_month', 'N/A')}",
-            )
+            col2.metric("Months Included", str(len(cov_rows)))
             col3.metric("Model Schema Version", str(meta.get("model_schema_version", "v1")))
             col4.metric("Release Status", str(eligibility.get("status", "VERIFIED")))
 
@@ -97,6 +96,7 @@ def main():
             st.markdown(
                 f"- **Release ID**: `{meta.get('release_id', reader.release_id)}`  \n"
                 f"- **Derivation ID**: `{meta.get('derivation_id', 'N/A')}`  \n"
+                f"- **Window Covered**: `{window_label}`  \n"
                 f"- **Built / Finalized (UTC)**: `{built_at}`"
             )
 

@@ -16,5 +16,3 @@ This index follows the coverage categories in [arc42](https://arc42.org/overview
 | 10 Quality requirements | [Requirements](../requirements.md), [acceptance plan](../verification/acceptance-plan.md), rule inventory |
 | 11 Risks and technical debt | [Risk register](risks.md) |
 | 12 Glossary | [Glossary](../reference/glossary.md) |
-
-[Structure research and adaptation rationale](../delivery/structure-research.md).

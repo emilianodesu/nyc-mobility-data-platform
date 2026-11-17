@@ -19,7 +19,7 @@
 - **Target Month**: `2024-12`
 - **Logical Source ID**: `tlc/hvfhv/2024-12`
 - **Source Object Digest (SHA-256)**: `088217c8fd4bb66665edd51b94af6864f832f425a2bdf1f05459fe931cd208b6`
-- **Parquet File Path**: `/Users/emilianodesu/Documents/Projects/hvfhv/.data/raw/sha256/088217c8fd4bb66665edd51b94af6864f832f425a2bdf1f05459fe931cd208b6/source.parquet`
+- **Parquet File Path**: `<DATA_ROOT>/raw/sha256/088217c8fd4bb66665edd51b94af6864f832f425a2bdf1f05459fe931cd208b6/source.parquet`
 - **Parquet File Size**: `3,460,475` bytes (`3.30` MB)
 - **Source Schema Adapter**: `hvfhv_24col_pre2025.v1` (24 columns, `cbd_congestion_fee` absent, `cbd_fee_field_present = false`)
 - **Zone Lookup Reference**: `taxi_zone_lookup.csv` (265 LocationIDs 1..265)

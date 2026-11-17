@@ -1,14 +1,12 @@
 # HVFHV — Operations design v1
 
-Date: 2026-11-09. Status: proposed operator contracts and runbooks, not implemented commands or demonstrated recovery. No repository, environment, pipeline or deployment is created by this document.
-
-Authority: [Architecture v1](../architecture/overview.md), [low-level design](../architecture/low-level-design.md), [data contracts](data-contracts.md) and [verification plan](../verification/acceptance-plan.md). Compatibility and scale remain subject to [technical readiness](../verification/technical-readiness.md). This document refines operational behavior without adding services, automation infrastructure or external publication.
+Operator contracts and failure-recovery specifications. Authority: [Architecture v1](../architecture/overview.md), [low-level design](../architecture/low-level-design.md), [data contracts](data-contracts.md) and [verification plan](../verification/acceptance-plan.md). Compatibility and resource boundaries are detailed in [technical readiness](../verification/technical-readiness.md).
 
 ## 1. Meaning of operation and publication
 
-All operation names below are logical interfaces proposed for a future implementation. They are not shell commands, installed APIs or claims of an existing CLI. A future command adapter must preserve these contracts rather than becoming a separate implementation of correctness rules.
+The interfaces below define canonical application operations implemented under `src/hvfhv/` and exposed via Dagster assets/jobs and CLI runners.
 
-Local publication means selecting an already verified analytical release in SQLite. It does not mean publishing code, uploading data, deploying a website or making professional claims. Once implementation and normal local operation are authorized, routine acquisition, construction and successful local selection do not require repeated user approvals. External publication remains subject to the user's review. Rollback/rejection are explicit operator decisions with recorded reasons; cleanup requires review of its concrete deletion preview. None of these decisions is inferred from silence.
+Local publication means atomically selecting an already verified analytical release in SQLite. Routine acquisition, build, and local selection run without external network publication; rollback and rejection are explicit operator decisions with recorded audit reasons, while storage cleanup requires explicit preview and confirmation.
 
 ## 2. Common request and result envelope
 

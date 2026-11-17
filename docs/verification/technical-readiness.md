@@ -1,6 +1,6 @@
-# HVFHV — Technical readiness assessment
+# HVFHV — Technical readiness & numerical oracles
 
-Date: 2026-11-09. Documentary assessment, not an installed environment or a passed G0 gate. Complements [design verification](design-review.md).
+Baseline dependency boundaries, DuckDB out-of-core execution notes, and hand-calculated interval/quantile verification oracles. See [execution log](execution-log.md) for measured empirical results.
 
 ## 1. Dependency evidence and candidate interpreter
 
