@@ -91,7 +91,7 @@ def main():
         st.subheader("Source Contributions")
         contribs = summary.get("source_contributions", [])
         if contribs:
-            st.dataframe(contribs, use_container_width=True)
+            st.dataframe(contribs, width="stretch")
         else:
             st.info("No source contributions available in release.")
 
@@ -99,7 +99,7 @@ def main():
         st.caption("Explicit representation of months; absent source months have NULL row counts (never 0).")
         cov_data = summary.get("coverage", [])
         if cov_data:
-            st.dataframe(cov_data, use_container_width=True)
+            st.dataframe(cov_data, width="stretch")
         else:
             st.info("No coverage records available in release.")
 
@@ -110,14 +110,14 @@ def main():
         if s08:
             st.success(f"Post-Seal S08 Verified at {s08.get('verified_at_utc')} (Verification ID: {s08.get('verification_id')})")
         if rules:
-            st.dataframe(rules, use_container_width=True)
+            st.dataframe(rules, width="stretch")
         else:
             st.info("No quality rules recorded.")
 
         st.subheader("Full-Scan Column Profiles")
         profiles = summary.get("column_profiles", [])
         if profiles:
-            st.dataframe(profiles, use_container_width=True)
+            st.dataframe(profiles, width="stretch")
         else:
             st.info("No column profiles recorded.")
 
@@ -138,15 +138,18 @@ def main():
         st.sidebar.markdown("---")
         st.sidebar.subheader("Filter Populations")
         f_month = st.sidebar.text_input("Source Month (YYYY-MM)", value="")
+        f_date = st.sidebar.text_input("Pickup Date (YYYY-MM-DD)", value="")
         f_license = st.sidebar.text_input("HVFHS License (e.g. HV0003)", value="")
         f_pu = st.sidebar.number_input("PU Location ID (1-265)", min_value=0, max_value=265, value=0)
 
         query_pu = int(f_pu) if f_pu > 0 else None
         query_month = f_month.strip() if f_month.strip() else None
+        query_date = f_date.strip() if f_date.strip() else None
         query_license = f_license.strip() if f_license.strip() else None
 
         result = reader.query_recorded_intervals(
             source_month=query_month,
+            pickup_date=query_date,
             hvfhs_license_num=query_license,
             pu_location_id=query_pu,
             limit=500,
@@ -173,12 +176,12 @@ def main():
         st.subheader("Daily Aggregate Breakdown by Pickup Location & License")
         breakdown = result.get("daily_breakdown", [])
         if breakdown:
-            st.dataframe(breakdown, use_container_width=True)
+            st.dataframe(breakdown, width="stretch")
 
         st.subheader("Sample Trip Observations")
         rows = result.get("sample_rows", [])
         if rows:
-            st.dataframe(rows, use_container_width=True)
+            st.dataframe(rows, width="stretch")
         else:
             st.info("No trip records matching criteria.")
 
