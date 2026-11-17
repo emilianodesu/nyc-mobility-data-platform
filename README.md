@@ -59,6 +59,19 @@ Measured against official NYC TLC releases (`fhvhv_tripdata_2024-12.parquet`, `f
 
 ---
 
+## UI & Lineage Preview
+
+### Streamlit — Data Reliability & Quality Overview
+![Streamlit Data Reliability View](docs/assets/streamlit-reliability.png)
+
+### Streamlit — Recorded Request-to-Pickup Intervals (41.47M Official Trips)
+![Streamlit Recorded Intervals View](docs/assets/streamlit-intervals.png)
+
+### Dagster — Global Asset Lineage
+![Dagster Global Asset Lineage](docs/assets/dagster-lineage.png)
+
+---
+
 ## Tech Stack
 
 - **Analytical Compute**: DuckDB `2.0.0`, PyArrow `26.0.1`
@@ -86,7 +99,7 @@ Measured against official NYC TLC releases (`fhvhv_tripdata_2024-12.parquet`, `f
 ├── scripts/
 │   └── run_real_tlc_pipeline.py  # End-to-end acquisition & publication runner for official NYC TLC files
 ├── tests/                     # 229 automated tests across Gates G0-G5 (unit, recovery, adversarial)
-├── docs/                      # Architecture (arc42/ADRs), data contracts, operations & execution logs
+├── docs/                      # Architecture (arc42/ADRs), data contracts, execution logs & UI assets
 ├── references/                # Preserved schema inspection profiles from NYC TLC source evaluation
 ├── pyproject.toml             # Package metadata & pytest configuration
 └── requirements.lock          # Pinned dependency lockfile
