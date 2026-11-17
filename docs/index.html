@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NYC Mobility Data Reliability Platform — HVFHV Batch Engineering</title>
+  <meta
+    name="description"
+    content="Single-machine batch data reliability platform over 41.47M official NYC TLC HVFHV trip records using DuckDB 2.0, SQLite CAS publication, Dagster 1.13, and Streamlit."
+  />
+  <style>
+    :root {
+      --bg: #0b0f17;
+      --surface: #121826;
+      --surface-2: #182032;
+      --border: #253047;
+      --text: #e6edf7;
+      --muted: #9aa7bd;
+      --accent: #38bdf8;
+      --accent-2: #34d399;
+      --amber: #fbbf24;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: var(--sans);
+      background: radial-gradient(circle at top right, #132038 0%, var(--bg) 42%);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .container {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    header.nav {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: blur(12px);
+      background: rgba(11, 15, 23, 0.85);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+      gap: 16px;
+    }
+
+    .brand {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+
+    .brand span {
+      color: var(--accent);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 20px;
+      font-size: 0.9rem;
+      align-items: center;
+    }
+
+    .nav-links a {
+      color: var(--muted);
+    }
+
+    .nav-links a:hover {
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.92rem;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      transition: border-color 0.15s ease, transform 0.15s ease;
+    }
+
+    .btn:hover {
+      border-color: var(--accent);
+      text-decoration: none;
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #0ea5e9, #2563eb);
+      border-color: transparent;
+      color: #fff;
+    }
+
+    .hero {
+      padding: 72px 0 48px;
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .pill {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .pill.ok {
+      border-color: rgba(52, 211, 153, 0.35);
+      color: var(--accent-2);
+    }
+
+    h1 {
+      margin: 0 0 16px;
+      font-size: clamp(2rem, 4.2vw, 3.1rem);
+      line-height: 1.12;
+      letter-spacing: -0.025em;
+    }
+
+    .lead {
+      font-size: 1.12rem;
+      color: var(--muted);
+      max-width: 780px;
+      margin: 0 0 28px;
+    }
+
+    .cta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 44px;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+
+    .kpi {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .kpi-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .kpi-value {
+      font-family: var(--mono);
+      font-size: 1.7rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .kpi-sub {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    section {
+      padding: 48px 0;
+      border-top: 1px solid var(--border);
+    }
+
+    h2 {
+      margin: 0 0 10px;
+      font-size: 1.65rem;
+      letter-spacing: -0.02em;
+    }
+
+    .section-desc {
+      color: var(--muted);
+      margin: 0 0 28px;
+      max-width: 760px;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 22px;
+    }
+
+    .card h3 {
+      margin: 0 0 8px;
+      font-size: 1.05rem;
+      color: var(--text);
+    }
+
+    .card p {
+      margin: 0;
+      font-size: 0.92rem;
+      color: var(--muted);
+    }
+
+    .flow-diagram {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      overflow-x: auto;
+    }
+
+    .flow-steps {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      justify-content: space-between;
+    }
+
+    .flow-node {
+      flex: 1 1 160px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      min-width: 155px;
+    }
+
+    .flow-node strong {
+      display: block;
+      font-size: 0.9rem;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+
+    .flow-node span {
+      display: block;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .flow-arrow {
+      color: var(--muted);
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .tab-btn {
+      cursor: pointer;
+      padding: 9px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 600;
+      font-family: var(--sans);
+    }
+
+    .tab-btn.active {
+      background: var(--surface-2);
+      color: var(--text);
+      border-color: var(--accent);
+    }
+
+    .preview-frame {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .preview-caption {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin: 0 0 12px;
+    }
+
+    .preview-frame img {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      font-size: 0.92rem;
+    }
+
+    th,
+    td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: var(--surface-2);
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    td {
+      color: var(--muted);
+    }
+
+    td code,
+    p code,
+    li code {
+      font-family: var(--mono);
+      font-size: 0.85em;
+      color: var(--text);
+      background: var(--surface-2);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .callout {
+      margin-top: 18px;
+      padding: 16px 20px;
+      border-left: 3px solid var(--amber);
+      background: rgba(251, 191, 36, 0.06);
+      border-radius: 0 8px 8px 0;
+      font-size: 0.92rem;
+      color: var(--muted);
+    }
+
+    pre {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 20px;
+      overflow-x: auto;
+      font-family: var(--mono);
+      font-size: 0.86rem;
+      color: var(--text);
+      margin: 0;
+    }
+
+    .doc-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+      gap: 12px;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .doc-list li {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+
+    .doc-list strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 0.94rem;
+    }
+
+    .doc-list span {
+      font-size: 0.86rem;
+      color: var(--muted);
+    }
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 0 48px;
+      font-size: 0.86rem;
+      color: var(--muted);
+    }
+
+    @media (max-width: 720px) {
+      .nav-links {
+        display: none;
+      }
+      .flow-arrow {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="nav">
+    <div class="container nav-inner">
+      <div class="brand">nyc-mobility-data-platform <span>/ HVFHV</span></div>
+      <nav class="nav-links">
+        <a href="#architecture">Architecture</a>
+        <a href="#preview">UI &amp; Lineage</a>
+        <a href="#benchmarks">Benchmarks</a>
+        <a href="#docs">Docs &amp; Quickstart</a>
+        <a href="https://github.com/emilianodesu/nyc-mobility-data-platform" target="_blank" rel="noopener">GitHub Repo</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero" style="border-top: none;">
+      <div class="pill-row">
+        <span class="pill ok">CI Verified · 229 / 229 Tests Passing</span>
+        <span class="pill">DuckDB 2.0.0</span>
+        <span class="pill">PyArrow 26.0.1</span>
+        <span class="pill">SQLite CAS Control</span>
+        <span class="pill">Dagster 1.13.30</span>
+        <span class="pill">Streamlit 1.67.0</span>
+      </div>
+      <h1>HVFHV Monthly Data Reliability Platform</h1>
+      <p class="lead">
+        A single-machine batch data engineering platform built over <strong>official NYC TLC High-Volume For-Hire Vehicle</strong> trip datasets — combining immutable content-addressed Parquet acquisition, native DuckDB transformations, atomic SQLite compare-and-swap (CAS) releases, Dagster asset lineage, and a read-only Streamlit console without cloud overhead.
+      </p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="https://github.com/emilianodesu/nyc-mobility-data-platform" target="_blank" rel="noopener">
+          View Source on GitHub
+        </a>
+        <a class="btn" href="#preview">Explore Live Screenshots</a>
+        <a class="btn" href="#benchmarks">See 41.47M-Row Benchmarks</a>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi">
+          <div class="kpi-label">Official Trips Processed</div>
+          <div class="kpi-value">41,474,517</div>
+          <div class="kpi-sub">2024-12 (24-col) &amp; 2025-01 (25-col)</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Automated Gate Suite</div>
+          <div class="kpi-value">229 PASS</div>
+          <div class="kpi-sub">Gates G0–G5 · 0 skipped · 0 failed</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Storage &amp; WAL Seal</div>
+          <div class="kpi-value">20.75 GiB</div>
+          <div class="kpi-sub">80 GiB budget · 0 WAL · 0 spill files</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Read-Only Query Latency</div>
+          <div class="kpi-value">1.923 s</div>
+          <div class="kpi-sub">Cold ReleaseReader under 1 GiB cap</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="architecture">
+      <h2>System Architecture &amp; Reliability Guarantees</h2>
+      <p class="section-desc">
+        Designed around strict separation between raw evidence, analytical compilation, publication authority, and read-only consumption.
+      </p>
+
+      <div class="flow-diagram">
+        <div class="flow-steps">
+          <div class="flow-node">
+            <strong>1. Acquisition</strong>
+            <span>HTTPS download, full SHA-256 verification, PyArrow Parquet/CSV decode into content-addressed raw store.</span>
+          </div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-node">
+            <strong>2. Transform &amp; Gate</strong>
+            <span>DuckDB 2.0 SQL candidate build, 24&rarr;25 column schema adapter, Type 7 quantiles, rules S01–S08 &amp; Q01–Q09.</span>
+          </div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-node">
+            <strong>3. Atomic Release</strong>
+            <span><code>CHECKPOINT</code> zero-WAL seal, SHA-256 manifest, SQLite CAS generation swap &amp; Option A retention.</span>
+          </div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-node">
+            <strong>4. Orchestration &amp; UI</strong>
+            <span>Dagster 1.13 lineage &amp; gap checks; read-only Streamlit console with out-of-cache eligibility guard.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-grid">
+        <div class="card">
+          <h3>SQLite CAS Publication Authority</h3>
+          <p>
+            SQLite (<code>DELETE</code> journal, <code>synchronous=EXTRA</code>, FK enforcement) atomically promotes verified releases via <code>expected_parent</code>, <code>expected_generation</code>, and idempotent <code>operation_key</code>. POSIX <code>fcntl.flock</code> serializes writers and bounds readers.
+          </p>
+        </div>
+        <div class="card">
+          <h3>Option A Storage Retention (ADR 0006)</h3>
+          <p>
+            12-month projections showed 4 full DuckDB snapshots (~98.13 GiB) would breach the 80 GiB workstation cap. Option A retains <code>current + 1 prior</code> verified database while keeping immutable raw Parquet files and JSON manifests for deterministic rebuilds.
+          </p>
+        </div>
+        <div class="card">
+          <h3>24 &rarr; 25 Column Schema Evolution</h3>
+          <p>
+            Bridges the 2025 NYC Congestion Relief Zone fee introduction explicitly with <code>cbd_fee_field_present</code> so pre-2025 <code>NULL</code> entries in <code>2024-12</code> are never silently coerced into <code>$0.00</code> alongside <code>2025-01</code> records.
+          </p>
+        </div>
+        <div class="card">
+          <h3>Exact Type 7 Quantiles &amp; Partition</h3>
+          <p>
+            Evaluates exact <code>p50</code> and <code>p95</code> via DuckDB <code>quantile_cont</code> over microsecond integer deltas without subgroup percentile averaging, preserving <code>total = eligible_nonnegative + negative_recorded_interval + missing_timestamp</code>.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="preview">
+      <h2>UI &amp; Lineage Preview</h2>
+      <p class="section-desc">
+        Captured directly from the local Streamlit analytical console and Dagster webserver running against the published 41.47M-row release (<code>rel_2024_12_2025_01_f2d153b3</code>).
+      </p>
+
+      <div class="tabs" role="tablist" aria-label="UI Screenshots">
+        <button class="tab-btn active" data-target="tab-reliability" role="tab" aria-selected="true">
+          Streamlit · Data Reliability View
+        </button>
+        <button class="tab-btn" data-target="tab-intervals" role="tab" aria-selected="false">
+          Streamlit · Recorded Intervals (41.47M Trips)
+        </button>
+        <button class="tab-btn" data-target="tab-dagster" role="tab" aria-selected="false">
+          Dagster · Global Asset Lineage
+        </button>
+      </div>
+
+      <div class="preview-frame" id="tab-reliability">
+        <p class="preview-caption">
+          Provenance metadata, source month coverage truth, Post-Seal <code>S08</code> attestation banner, quality rules <code>Q01–Q09</code>, full-scan column profiles, and live SQLite control-plane state.
+        </p>
+        <img src="assets/streamlit-reliability.png" alt="Streamlit Data Reliability Overview" loading="lazy" />
+      </div>
+
+      <div class="preview-frame" id="tab-intervals" style="display: none;">
+        <p class="preview-caption">
+          Interactive filters (<code>source_month</code>, <code>pickup_date</code>, <code>hvfhs_license_num</code>, <code>pu_location_id</code>), exact Type 7 <code>p50 = 249.00 s</code> / <code>p95 = 666.00 s</code> quantiles, denominator partition, and invariant disclosures.
+        </p>
+        <img src="assets/streamlit-intervals.png" alt="Streamlit Recorded Request-to-Pickup Intervals" loading="lazy" />
+      </div>
+
+      <div class="preview-frame" id="tab-dagster" style="display: none;">
+        <p class="preview-caption">
+          Dagster 1.13 asset lineage connecting <code>raw_acquisition</code> (<code>taxi_zone_raw</code>, <code>tlc_hvfhv_raw</code>) to <code>transforms</code> (<code>analytical_release</code>).
+        </p>
+        <img src="assets/dagster-lineage.png" alt="Dagster Global Asset Lineage" loading="lazy" />
+      </div>
+    </section>
+
+    <section id="benchmarks">
+      <h2>Verified Real-Data Benchmarks</h2>
+      <p class="section-desc">
+        Measured end-to-end on official NYC TLC releases (<code>fhvhv_tripdata_2024-12.parquet</code>, <code>fhvhv_tripdata_2025-01.parquet</code>, and <code>taxi_zone_lookup.csv</code>).
+      </p>
+
+      <div style="overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Metric / Stage</th>
+              <th>Release 1 (<code>2024-12</code> Slice)</th>
+              <th>Release 2 (<code>2024-12</code> + <code>2025-01</code> Window)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Total Trips Ingested</strong></td>
+              <td><code>21,068,851</code></td>
+              <td><code>41,474,517</code></td>
+            </tr>
+            <tr>
+              <td><strong>Interval Partition</strong></td>
+              <td><code>20,817,586</code> eligible / <code>251,265</code> neg / <code>0</code> miss</td>
+              <td><code>41,023,464</code> eligible / <code>451,053</code> neg / <code>0</code> miss</td>
+            </tr>
+            <tr>
+              <td><strong>Eligible Quantiles (Type 7)</strong></td>
+              <td><code>p50 = 268.0s</code> / <code>p95 = 716.0s</code></td>
+              <td><code>p50 = 249.0s</code> / <code>p95 = 666.0s</code></td>
+            </tr>
+            <tr>
+              <td><strong>Build Wall Time</strong></td>
+              <td><code>20.61s</code></td>
+              <td><code>32.63s</code> (incremental)</td>
+            </tr>
+            <tr>
+              <td><strong>Peak Writer RSS (&le; 8,192 MB)</strong></td>
+              <td><code>6,227.20 MB</code></td>
+              <td><code>7,634.23 MB</code></td>
+            </tr>
+            <tr>
+              <td><strong>DuckDB Artifact Size</strong></td>
+              <td><code>992.76 MiB</code> (<code>0</code> WAL, <code>0</code> spill)</td>
+              <td><code>1,957.76 MiB</code> (<code>0</code> WAL, <code>0</code> spill)</td>
+            </tr>
+            <tr>
+              <td><strong>Total Project Footprint</strong></td>
+              <td>—</td>
+              <td><code>20.75 GiB</code> (<code>59.25 GiB</code> headroom under <code>80 GiB</code>)</td>
+            </tr>
+            <tr>
+              <td><strong>Consumer Cold Query Latency</strong></td>
+              <td>—</td>
+              <td><code>1.923s</code> (headless <code>ReleaseReader</code>)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout">
+        <strong>CBD Congestion Fee Transition Observed (<code>S02</code> / <code>Q06</code>):</strong>
+        Across <code>20,405,666</code> trips in <code>2025-01</code>, <code>14,105,454</code> recorded <code>$0.00</code> and <code>6,300,212</code> recorded positive fees up to <code>$3.00</code> (<code>p95 = $1.50</code>), while all <code>21,068,851</code> pre-2025 rows retain explicit <code>NULL</code> (<code>cbd_fee_field_present = false</code>).
+      </div>
+    </section>
+
+    <section id="docs">
+      <h2>Quickstart &amp; Technical Documentation</h2>
+      <p class="section-desc">
+        Reproduce the locked Python <code>3.11–3.14</code> environment and verify all 229 automated tests locally:
+      </p>
+
+      <pre style="margin-bottom: 24px;">git clone https://github.com/emilianodesu/nyc-mobility-data-platform.git
+cd nyc-mobility-data-platform
+python3 -m venv .venv &amp;&amp; source .venv/bin/activate
+pip install -r requirements.lock &amp;&amp; pip install --no-deps -e .
+pytest -q</pre>
+
+      <ul class="doc-list">
+        <li>
+          <strong><a href="https://github.com/emilianodesu/nyc-mobility-data-platform/blob/main/docs/architecture/overview.md" target="_blank" rel="noopener">Architecture Overview</a></strong>
+          <span>System boundaries, SQLite control authority, and recovery model.</span>
+        </li>
+        <li>
+          <strong><a href="https://github.com/emilianodesu/nyc-mobility-data-platform/blob/main/docs/architecture/decisions/0006-amend-release-retention-to-option-a.md" target="_blank" rel="noopener">ADR 0006 — Option A Retention</a></strong>
+          <span>Formal storage feasibility amendment enforcing the 80 GiB budget.</span>
+        </li>
+        <li>
+          <strong><a href="https://github.com/emilianodesu/nyc-mobility-data-platform/blob/main/docs/reference/data-contracts.md" target="_blank" rel="noopener">Data &amp; Quality Contracts</a></strong>
+          <span>Canonical schemas, interval math, and rules S01–S08 &amp; Q01–Q09.</span>
+        </li>
+        <li>
+          <strong><a href="https://github.com/emilianodesu/nyc-mobility-data-platform/blob/main/docs/verification/execution-log.md" target="_blank" rel="noopener">Empirical Execution Log</a></strong>
+          <span>SHA-256 digests, telemetry, and test certifications across Gates G0–G6.</span>
+        </li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      Source code and documentation are released under the
+      <a href="https://github.com/emilianodesu/nyc-mobility-data-platform/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>.
+      Official NYC TLC trip datasets are governed by NYC Open Data terms and are excluded from Git tracking.
+    </div>
+  </footer>
+
+  <script>
+    const buttons = document.querySelectorAll('.tab-btn');
+    const panels = document.querySelectorAll('.preview-frame');
+    buttons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        buttons.forEach((b) => {
+          b.classList.remove('active');
+          b.setAttribute('aria-selected', 'false');
+        });
+        panels.forEach((p) => {
+          p.style.display = 'none';
+        });
+        btn.classList.add('active');
+        btn.setAttribute('aria-selected', 'true');
+        const target = document.getElementById(btn.dataset.target);
+        if (target) target.style.display = 'block';
+      });
+    });
+  </script>
+</body>
+</html>
