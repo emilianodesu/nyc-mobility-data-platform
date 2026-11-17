@@ -6,9 +6,16 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
+    # Only run on public repositories using standard Ubuntu runners ($0 cost on GitHub).
+    if: github.event.repository.private == false
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
